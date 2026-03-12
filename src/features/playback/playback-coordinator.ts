@@ -6,7 +6,7 @@
  *
  * Instead of hard-pausing Spotify, we fade the music volume down and play
  * the DJ clip over the tail of the track, creating a smooth radio-style
- * crossfade. When the clip ends we skip to the next track and restore volume.
+ * crossfade. When the clip ends we fade the music back up and let it ride.
  *
  * Failure at any point restores volume and returns to monitoring.
  * Music playback is never blocked — if something goes wrong, we skip.
@@ -59,7 +59,7 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
    * Execute a crossfade transition:
    *   1. Fade Spotify volume down over ~3 s
    *   2. Play DJ clip while music continues at ducked volume
-   *   3. When clip finishes → skip to next track → fade volume back up
+   *   3. When clip finishes → fade volume back up on the already-playing track
    */
   async executeTransition(djClipUrl: string): Promise<void> {
     if (this._state !== "monitoring") {
@@ -91,18 +91,8 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
         // Fall through to restore volume and advance track
       }
 
-      // ── Phase 3: Skip to next track and restore volume ─────────────────
+      // ── Phase 3: Restore volume on the already-playing track ──────────
       this.setState("resumingPlayback");
-      try {
-        await this.spotifyPlayer.nextTrack();
-      } catch (err) {
-        console.warn("[PlaybackCoordinator] nextTrack failed, trying resume:", err);
-        try {
-          await this.spotifyPlayer.resume();
-        } catch (resumeErr) {
-          console.error("[PlaybackCoordinator] Resume also failed:", resumeErr);
-        }
-      }
 
       // Fade volume back up to the original level
       try {

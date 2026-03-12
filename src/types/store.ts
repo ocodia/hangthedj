@@ -23,6 +23,12 @@ export interface AppPlaybackState {
   spotify: PlaybackState | null;
   currentTrack: Track | null;
   recentTracks: Track[];
+  /** Current position in ms (updated every second while session is running) */
+  progressMs: number;
+  /** Total duration of current track in ms */
+  durationMs: number;
+  /** Next track in queue (from Spotify SDK) */
+  nextTrack: Track | null;
 }
 
 export interface SessionState {

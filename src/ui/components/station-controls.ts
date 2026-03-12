@@ -316,6 +316,13 @@ export class StationControls {
     const remaining = position.durationMs - position.progressMs;
     const currentTrackId = appStore.get("playback").currentTrack?.id ?? null;
 
+    // Push position + next track to store for UI debug display
+    updatePlaybackState({
+      progressMs: position.progressMs,
+      durationMs: position.durationMs,
+      nextTrack: this.services.spotifyPlayer.getNextTrack(),
+    });
+
     // Debug: log every ~5 seconds so we can see the monitor is alive
     if (remaining > 0 && remaining % 5000 < 1100) {
       console.log(`[PositionMonitor] ${Math.round(remaining / 1000)}s remaining | preparing=${this.isPreparingBanter} | hasPending=${!!this.pendingTransition} | coordinator=${this.services.coordinator.getState()}`);

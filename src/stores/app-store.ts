@@ -43,6 +43,9 @@ function createInitialStore(): AppStore {
       spotify: null,
       currentTrack: null,
       recentTracks: [],
+      progressMs: 0,
+      durationMs: 0,
+      nextTrack: null,
     },
     session: {
       activeSession: null,

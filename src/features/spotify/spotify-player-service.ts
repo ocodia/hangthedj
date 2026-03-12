@@ -87,6 +87,7 @@ export interface SpotifyPlayerService {
   onStateChange(handler: (state: PlaybackState) => void): () => void;
   onTrackChange(handler: (track: Track | null) => void): () => void;
   getDeviceId(): string | null;
+  getNextTrack(): Track | null;
   fetchCurrentPosition(): Promise<{ progressMs: number; durationMs: number; isPlaying: boolean } | null>;
 }
 
@@ -96,6 +97,7 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   private deviceId: string | null = null;
   private currentState: PlaybackState | null = null;
   private currentTrack: Track | null = null;
+  private nextTrack: Track | null = null;
 
   private stateChangeHandlers: Array<(state: PlaybackState) => void> = [];
   private trackChangeHandlers: Array<(track: Track | null) => void> = [];
@@ -273,6 +275,10 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
     return this.deviceId;
   }
 
+  getNextTrack(): Track | null {
+    return this.nextTrack;
+  }
+
   async fetchCurrentPosition(): Promise<{ progressMs: number; durationMs: number; isPlaying: boolean } | null> {
     // If we haven't received any state events yet, fall back to SDK query
     if (this.lastPositionTimestamp === 0) {
@@ -309,6 +315,10 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   private handleStateChange(sdkState: Spotify.WebPlaybackState): void {
     const sdkTrack = sdkState.track_window.current_track;
     const track = sdkTrack ? this.normalizeTrack(sdkTrack) : null;
+
+    // Capture next track from the SDK track window
+    const sdkNextTrack = sdkState.track_window.next_tracks[0];
+    this.nextTrack = sdkNextTrack ? this.normalizeTrack(sdkNextTrack) : null;
 
     // Update interpolation state on every SDK event
     this.lastPositionMs = sdkState.position;
