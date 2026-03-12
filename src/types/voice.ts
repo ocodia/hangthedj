@@ -17,6 +17,10 @@ export interface VoiceRenderResult {
   cacheKey: string;
 }
 
+export interface VoiceEngine {
+  render(req: VoiceRenderRequest): Promise<VoiceRenderResult>;
+}
+
 export interface ClipMetadataRecord {
   /** Same as cacheKey */
   id: string;

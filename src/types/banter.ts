@@ -39,6 +39,10 @@ export interface BanterResult {
   fingerprint: string;
 }
 
+export interface BanterEngine {
+  generate(req: BanterRequest): Promise<BanterResult>;
+}
+
 export interface BanterHistoryRecord {
   id: string;
   sessionId: string;
