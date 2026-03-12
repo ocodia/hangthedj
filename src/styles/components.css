@@ -1,0 +1,352 @@
+/* HangTheDJ - Component Styles */
+
+/* ─── Auth Panel ──────────────────────────────────────────────────── */
+
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.auth-container {
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+
+.auth-logo {
+  font-size: 4rem;
+  margin-bottom: 0.5rem;
+}
+
+.auth-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.25rem;
+  color: var(--color-text);
+}
+
+.auth-tagline {
+  font-size: 1.1rem;
+  color: var(--color-accent);
+  margin-bottom: 1.5rem;
+}
+
+.auth-description {
+  color: var(--color-text-muted);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.btn-spotify {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-accent);
+  color: #000;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 2rem;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-bottom: 1.5rem;
+}
+
+.btn-spotify:hover {
+  background: var(--color-accent-hover);
+  transform: scale(1.03);
+}
+
+.auth-note {
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+/* ─── App Header ──────────────────────────────────────────────────── */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-bg-panel);
+  border-bottom: 1px solid #2a2a2a;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-icon {
+  font-size: 1.5rem;
+}
+
+.app-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.btn-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* ─── Main Content ────────────────────────────────────────────────── */
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.col-main,
+.col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ─── Now Playing Bar ─────────────────────────────────────────────── */
+
+.now-playing-bar {
+  display: flex;
+  align-items: center;
+}
+
+.now-playing-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.track-artwork {
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.track-title {
+  font-weight: 600;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 0.875rem;
+}
+
+.now-playing-label {
+  color: var(--color-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.now-playing-empty {
+  padding: 0.5rem 0;
+}
+
+/* ─── Station Controls ────────────────────────────────────────────── */
+
+.station-controls h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.station-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.station-status {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-on {
+  color: var(--color-accent);
+}
+
+.status-off {
+  color: var(--color-text-muted);
+}
+
+.station-actions {
+  margin: 1rem 0 0.75rem;
+}
+
+.dj-status {
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* ─── Key Warning ─────────────────────────────────────────────────── */
+
+.key-warning {
+  border-left: 3px solid var(--color-warning);
+  padding-left: 1rem;
+}
+
+/* ─── Request Line ────────────────────────────────────────────────── */
+
+.request-line-panel h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.request-feedback {
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.request-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.request-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: var(--color-bg-surface);
+  border-radius: calc(var(--radius) / 2);
+  font-size: 0.875rem;
+}
+
+.request-artist {
+  font-weight: 500;
+}
+
+.request-status {
+  text-transform: capitalize;
+  font-size: 0.75rem;
+}
+
+.status-accepted .request-status { color: var(--color-accent); }
+.status-rejected .request-status { color: var(--color-error); }
+.status-fulfilled .request-status { color: var(--color-accent); }
+
+/* ─── Settings Panel ──────────────────────────────────────────────── */
+
+.settings-panel h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.settings-panel h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-toggle-icon {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.settings-body {
+  margin-top: 1rem;
+}
+
+.key-status {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+/* ─── DJ Activity Log ─────────────────────────────────────────────── */
+
+.dj-activity-log h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.log-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.log-entry {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: calc(var(--radius) / 2);
+  background: var(--color-bg-surface);
+}
+
+.log-entry--dj {
+  border-left: 2px solid var(--color-accent);
+}
+
+.log-entry--error {
+  border-left: 2px solid var(--color-error);
+}
+
+.log-entry--system {
+  border-left: 2px solid #555;
+}
+
+.log-time {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
