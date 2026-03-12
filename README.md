@@ -27,7 +27,7 @@ npm install
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
-3. In app settings, add a **Redirect URI**: `http://localhost:5173/`
+3. In app settings, add a **Redirect URI**: `http://127.0.0.1:5175/`
 4. Copy your **Client ID**
 
 ### 3. Configure environment
@@ -48,7 +48,7 @@ VITE_SPOTIFY_CLIENT_ID=your_client_id_here
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open [http://127.0.0.1:5175](http://127.0.0.1:5175) in your browser.
 
 ### 5. Add your OpenAI key
 
@@ -65,7 +65,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 | Setting | Value |
 |---------|-------|
 | App type | Web (no client secret used) |
-| Redirect URI | `http://localhost:5173/` (dev) or your deployed URL |
+| Redirect URI | `http://127.0.0.1:5175/` (dev) or your deployed URL |
 | Scopes needed | `streaming`, `user-read-email`, `user-read-private`, `user-read-playback-state`, `user-modify-playback-state` |
 
 **Note:** Spotify Premium is required for browser-based playback via the Web Playback SDK.

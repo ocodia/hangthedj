@@ -3,6 +3,10 @@ import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "path";
 
 export default defineConfig({
+  server: {
+    host: "127.0.0.1",
+    port: 5175,
+  },
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),

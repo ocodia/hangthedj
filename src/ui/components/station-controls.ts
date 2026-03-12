@@ -168,6 +168,7 @@ export class StationControls {
       }
     );
 
+    // Ensure Spotify player is connected (should already be done by AppShell)
     if (!this.services.spotifyPlayer.getDeviceId()) {
       try {
         await this.services.spotifyPlayer.initialize(this.services.spotifyAuth);
@@ -179,7 +180,16 @@ export class StationControls {
       } catch (err) {
         console.error("[StationControls] Spotify init failed:", err);
         this.stopSession();
+        return;
       }
+    }
+
+    // Transfer playback to the HangTheDJ device so music actually plays here
+    try {
+      await this.services.spotifyPlayer.transferPlayback();
+    } catch (err) {
+      console.error("[StationControls] Playback transfer failed:", err);
+      // Non-fatal — user can manually switch device in Spotify
     }
   }
 

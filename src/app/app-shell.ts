@@ -30,6 +30,7 @@ import { createBanterEngine } from "@/features/banter/banter-engine";
 import { createVoiceEngine } from "@/features/voice/voice-engine";
 import {
   updateAuthState,
+  updateSpotifyState,
   updatePersonaState,
   updateAiState,
   updateSettings,
@@ -131,6 +132,19 @@ export class AppShell {
     const isAuthenticated = spotifyAuth.isAuthenticated();
     if (isAuthenticated) {
       updateAuthState({ isAuthenticated: true });
+
+      // Initialize Spotify Web Playback SDK so the player is ready
+      try {
+        await spotifyPlayer.initialize(spotifyAuth);
+        await spotifyPlayer.connect();
+        updateSpotifyState({
+          isConnected: true,
+          deviceId: spotifyPlayer.getDeviceId(),
+        });
+        console.log("[AppShell] Spotify player connected, device:", spotifyPlayer.getDeviceId());
+      } catch (err) {
+        console.error("[AppShell] Spotify player init failed:", err);
+      }
     }
 
     // 9. Mount the UI (pass services for wiring)

@@ -75,6 +75,7 @@ export interface SpotifyPlayerService {
   getPlaybackState(): PlaybackState | null;
   pause(): Promise<void>;
   resume(): Promise<void>;
+  transferPlayback(): Promise<void>;
   onStateChange(handler: (state: PlaybackState) => void): () => void;
   onTrackChange(handler: (track: Track | null) => void): () => void;
   getDeviceId(): string | null;
@@ -82,6 +83,7 @@ export interface SpotifyPlayerService {
 
 class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   private player: Spotify.Player | null = null;
+  private authService: SpotifyAuthService | null = null;
   private deviceId: string | null = null;
   private currentState: PlaybackState | null = null;
   private currentTrack: Track | null = null;
@@ -90,13 +92,15 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   private trackChangeHandlers: Array<(track: Track | null) => void> = [];
 
   async initialize(authService: SpotifyAuthService): Promise<void> {
-    await this.loadSdk();
-
+    this.authService = authService;
     return new Promise<void>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error("Spotify SDK ready callback timed out after 10 seconds"));
       }, 10_000);
 
+      // Set the ready callback BEFORE loading the SDK to avoid a race condition.
+      // The SDK calls window.onSpotifyWebPlaybackSDKReady synchronously during
+      // script execution, so it must already be defined when the script runs.
       window.onSpotifyWebPlaybackSDKReady = () => {
         clearTimeout(timeoutId);
         this.player = new window.Spotify.Player({
@@ -134,11 +138,25 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
           console.error("[SpotifyPlayer] Account error (Premium required?):", err);
           reject(new Error("Spotify account error — Premium required for browser playback"));
         });
+
+        // Connect immediately after setting up listeners so the "ready" event can fire.
+        this.player.connect().then((ok) => {
+          if (!ok) reject(new Error("Spotify player failed to connect"));
+        });
       };
+
+      // Load the SDK after the callback is in place
+      this.loadSdk().catch((err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      });
     });
   }
 
   async connect(): Promise<void> {
+    // connect() is now called inside initialize(), so this is a no-op
+    // if the player is already connected.
+    if (this.deviceId) return;
     if (!this.player) throw new Error("Player not initialized");
     const ok = await this.player.connect();
     if (!ok) throw new Error("Spotify player failed to connect");
@@ -167,6 +185,38 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   async resume(): Promise<void> {
     if (!this.player) throw new Error("Player not initialized");
     await this.player.resume();
+  }
+
+  /**
+   * Transfer Spotify playback to the HangTheDJ device using the Web API.
+   * If the user has music playing elsewhere, it moves here.
+   * If nothing is playing, it activates this device so play commands work.
+   */
+  async transferPlayback(): Promise<void> {
+    if (!this.deviceId) throw new Error("No device ID — player not ready");
+    if (!this.authService) throw new Error("Auth service not available");
+
+    const token = await this.authService.getAccessToken();
+    if (!token) throw new Error("No access token available");
+
+    const res = await fetch("https://api.spotify.com/v1/me/player", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        device_ids: [this.deviceId],
+        play: true,
+      }),
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const text = await res.text();
+      throw new Error(`Transfer playback failed: ${res.status} ${text}`);
+    }
+
+    console.log("[SpotifyPlayer] Playback transferred to HangTheDJ device");
   }
 
   onStateChange(handler: (state: PlaybackState) => void): () => void {
