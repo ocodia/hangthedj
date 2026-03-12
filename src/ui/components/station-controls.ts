@@ -5,8 +5,9 @@
  *   1. DJ introduces themselves (stationIdent banter → TTS → play)
  *   2. Transfer Spotify playback → first track starts
  *   3. Position monitor polls every second
- *   4. When < 10 s remain on a track → generate transition banter → TTS
- *   5. Execute transition (pause Spotify → play DJ clip → resume Spotify)
+ *   4. When < 30 s remain on a track → generate transition banter → TTS
+ *   5. When < 10 s remain → crossfade: fade music volume down, play DJ clip
+ *      over the ducked track tail, then skip to next track and restore volume
  *   6. Spotify auto-advances to the next track → repeat from step 3
  */
 
@@ -297,7 +298,7 @@ export class StationControls {
   // ────────────────────────────────────────────────────────────────────────────
   // Position monitor — two-phase approach:
   //   Phase 1: < 30 s remaining → pre-generate banter + TTS (cache the clip)
-  //   Phase 2: < 5 s remaining  → execute transition (pause → play clip → resume)
+  //   Phase 2: < 10 s remaining → crossfade (fade music → play clip over tail → next track)
   // ────────────────────────────────────────────────────────────────────────────
 
   private startPositionMonitor(): void {
@@ -323,7 +324,7 @@ export class StationControls {
     // ── Phase 1: Pre-generate banter when < 30s remaining ──────────────────
     if (
       remaining <= 30_000 &&
-      remaining > 5_000 &&
+      remaining > 10_000 &&
       !this.isPreparingBanter &&
       !this.pendingTransition &&
       currentTrackId !== this.banterEvaluatedForTrackId
@@ -339,9 +340,11 @@ export class StationControls {
       }
     }
 
-    // ── Phase 2: Execute transition when < 5s remaining and clip is ready ──
+    // ── Phase 2: Execute crossfade transition when < 10s remaining and clip is ready
+    //    The coordinator will fade the music down over ~3s, then play the DJ
+    //    clip over the ducked track tail before skipping to the next song.
     if (
-      remaining <= 5_000 &&
+      remaining <= 10_000 &&
       remaining > 0 &&
       this.pendingTransition &&
       this.pendingTransitionForTrackId === currentTrackId &&

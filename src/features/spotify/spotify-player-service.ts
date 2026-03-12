@@ -38,6 +38,8 @@ declare namespace Spotify {
     seek(positionMs: number): Promise<void>;
     nextTrack(): Promise<void>;
     getCurrentState(): Promise<WebPlaybackState | null>;
+    setVolume(volume: number): Promise<void>;
+    getVolume(): Promise<number>;
   }
   interface PlayerOptions {
     name: string;
@@ -79,6 +81,8 @@ export interface SpotifyPlayerService {
   resume(): Promise<void>;
   seek(positionMs: number): Promise<void>;
   nextTrack(): Promise<void>;
+  setVolume(volume: number): Promise<void>;
+  getVolume(): Promise<number>;
   transferPlayback(): Promise<void>;
   onStateChange(handler: (state: PlaybackState) => void): () => void;
   onTrackChange(handler: (track: Track | null) => void): () => void;
@@ -202,6 +206,16 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   async nextTrack(): Promise<void> {
     if (!this.player) throw new Error("Player not initialized");
     await this.player.nextTrack();
+  }
+
+  async setVolume(volume: number): Promise<void> {
+    if (!this.player) throw new Error("Player not initialized");
+    await this.player.setVolume(Math.max(0, Math.min(1, volume)));
+  }
+
+  async getVolume(): Promise<number> {
+    if (!this.player) throw new Error("Player not initialized");
+    return this.player.getVolume();
   }
 
   async resume(): Promise<void> {

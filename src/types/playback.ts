@@ -5,6 +5,7 @@ export type PlaybackCoordinatorState =
   | "monitoring"
   | "preparingTransition"
   | "waitingForInsertionPoint"
+  | "fadingOut"
   | "pausingPlayback"
   | "playingDjClip"
   | "resumingPlayback";
