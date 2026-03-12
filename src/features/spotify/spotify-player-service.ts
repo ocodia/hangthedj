@@ -319,7 +319,8 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
     const track = sdkTrack ? this.normalizeTrack(sdkTrack) : null;
 
     // Capture next track from the SDK track window
-    const sdkNextTrack = (sdkState.track_window as { current_track: Spotify.WebPlaybackTrack; next_tracks: Spotify.WebPlaybackTrack[] }).next_tracks[0];
+    const sdkNextTrack = (sdkState.track_window as { current_track: Spotify.WebPlaybackTrack; next_tracks: Spotify.WebPlaybackTrack[] })
+      .next_tracks[0];
     this._nextTrackInfo = sdkNextTrack ? this.normalizeTrack(sdkNextTrack) : null;
 
     // Update interpolation state on every SDK event

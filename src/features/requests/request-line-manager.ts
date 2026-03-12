@@ -6,16 +6,8 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import {
-  saveRequest,
-  getRequestsBySession,
-  updateRequestStatus,
-} from "@/features/storage/storage-service";
-import type {
-  ListenerRequest,
-  RequestSubmission,
-  RequestStatus,
-} from "@/types/request";
+import { saveRequest, getRequestsBySession, updateRequestStatus } from "@/features/storage/storage-service";
+import type { ListenerRequest, RequestSubmission, RequestStatus } from "@/types/request";
 
 // Rate limit: one request per minute per session (client-side enforcement)
 const REQUEST_COOLDOWN_MS = 60_000;
@@ -26,22 +18,14 @@ export interface RequestLineManager {
   submit(sessionId: string, submission: RequestSubmission): Promise<ListenerRequest>;
   getPending(sessionId: string): Promise<ListenerRequest[]>;
   getAll(sessionId: string): Promise<ListenerRequest[]>;
-  updateStatus(
-    id: string,
-    status: RequestStatus,
-    spokenAcknowledgement?: boolean,
-    promisedForLater?: boolean
-  ): Promise<void>;
+  updateStatus(id: string, status: RequestStatus, spokenAcknowledgement?: boolean, promisedForLater?: boolean): Promise<void>;
   clearSession(): void;
 }
 
 class RequestLineManagerImpl implements RequestLineManager {
   private lastSubmitTime = 0;
 
-  async submit(
-    sessionId: string,
-    submission: RequestSubmission
-  ): Promise<ListenerRequest> {
+  async submit(sessionId: string, submission: RequestSubmission): Promise<ListenerRequest> {
     // Rate limiting
     const now = Date.now();
     if (now - this.lastSubmitTime < REQUEST_COOLDOWN_MS) {
@@ -51,14 +35,15 @@ class RequestLineManagerImpl implements RequestLineManager {
     // Check pending count
     const pending = await this.getPending(sessionId);
     if (pending.length >= MAX_PENDING) {
-      throw new Error(
-        "The request queue is full. Try again after the DJ catches up."
-      );
+      throw new Error("The request queue is full. Try again after the DJ catches up.");
     }
 
     // Sanitize inputs (strip HTML-like tags)
     const sanitize = (s?: string) =>
-      s?.replace(/<[^>]*>/g, "").trim().slice(0, 200);
+      s
+        ?.replace(/<[^>]*>/g, "")
+        .trim()
+        .slice(0, 200);
 
     const request: ListenerRequest = {
       id: uuidv4(),
@@ -93,12 +78,7 @@ class RequestLineManagerImpl implements RequestLineManager {
     return getRequestsBySession(sessionId);
   }
 
-  async updateStatus(
-    id: string,
-    status: RequestStatus,
-    spokenAcknowledgement?: boolean,
-    promisedForLater?: boolean
-  ): Promise<void> {
+  async updateStatus(id: string, status: RequestStatus, spokenAcknowledgement?: boolean, promisedForLater?: boolean): Promise<void> {
     await updateRequestStatus(id, status, spokenAcknowledgement, promisedForLater);
   }
 

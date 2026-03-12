@@ -75,9 +75,7 @@ export class StationControls {
 
     const moodOptions = MOODS.map((m) => `<option value="${m.value}" ${m.value === this.sessionMood ? "selected" : ""}>${m.label}</option>`).join("");
 
-    const currentMoodPrompt = session.isRunning
-      ? this.sessionMoodPrompt
-      : MOOD_PROMPTS[this.sessionMood] ?? MOOD_PROMPTS["freestyle"];
+    const currentMoodPrompt = session.isRunning ? this.sessionMoodPrompt : (MOOD_PROMPTS[this.sessionMood] ?? MOOD_PROMPTS["freestyle"]);
 
     this.element.innerHTML = `
       <div class="station-header">
@@ -238,9 +236,7 @@ export class StationControls {
     // 5. Subscribe to request state changes to detect new call-ins
     this.unsubscribeRequests = appStore.subscribe("requests", (reqState) => {
       if (!this.sessionId) return;
-      const newRequests = reqState.requests.filter(
-        (r) => r.status === "pending" && !r.spokenAcknowledgement && !r.spotifyUri
-      );
+      const newRequests = reqState.requests.filter((r) => r.status === "pending" && !r.spokenAcknowledgement && !r.spotifyUri);
       // Add any genuinely new pending requests to the call-in queue
       for (const req of newRequests) {
         if (!this.pendingCallIns.some((c) => c.id === req.id)) {
@@ -431,10 +427,7 @@ export class StationControls {
     }
 
     // ── Phase 3: Process call-in queue (search + queue only, no banter) ─────────
-    if (
-      this.pendingCallIns.length > 0 &&
-      !this.isProcessingCallIn
-    ) {
+    if (this.pendingCallIns.length > 0 && !this.isProcessingCallIn) {
       void this.processNextCallIn();
     }
   }
@@ -576,9 +569,7 @@ export class StationControls {
         await this.services.spotifyPlayer.addToQueue(foundTrack.uri);
 
         // Update the request with Spotify info
-        await this.services.requestManager.updateStatus(
-          request.id, "accepted", false, false
-        );
+        await this.services.requestManager.updateStatus(request.id, "accepted", false, false);
         request.spotifyUri = foundTrack.uri;
         request.spotifyTrackTitle = foundTrack.title;
         request.status = "accepted";
@@ -596,15 +587,14 @@ export class StationControls {
           await this.playCallInBanterNow("requestAcknowledgement", [summary], true);
         } else {
           // ── QUEUED mode: generate banter text for the feed (no audio), defer to next transition ──
-          const banterText = await this.generateCallInBanterText(
-            "requestAcknowledgement",
-            [`${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's been queued up.`]
-          );
+          const banterText = await this.generateCallInBanterText("requestAcknowledgement", [
+            `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's been queued up.`,
+          ]);
           if (banterText) {
             addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
           }
           this.processedCallInSummaries.push(
-            `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's been queued up.`
+            `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's been queued up.`,
           );
         }
       } else {
@@ -614,9 +604,7 @@ export class StationControls {
           text: `❌ Couldn't find "${query}" on Spotify.`,
         });
 
-        await this.services.requestManager.updateStatus(
-          request.id, "rejected", false, false
-        );
+        await this.services.requestManager.updateStatus(request.id, "rejected", false, false);
         request.status = "rejected";
 
         this.refreshRequestStore();
@@ -627,15 +615,14 @@ export class StationControls {
           await this.playCallInBanterNow("requestRefusal", [summary], false);
         } else {
           // Generate text for feed, defer to next transition
-          const banterText = await this.generateCallInBanterText(
-            "requestRefusal",
-            [`${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`]
-          );
+          const banterText = await this.generateCallInBanterText("requestRefusal", [
+            `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`,
+          ]);
           if (banterText) {
             addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
           }
           this.processedCallInSummaries.push(
-            `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`
+            `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`,
           );
         }
       }
@@ -651,10 +638,7 @@ export class StationControls {
   /**
    * Generate banter TEXT only (no TTS/audio). Returns the script text for the activity feed.
    */
-  private async generateCallInBanterText(
-    segmentType: SegmentType,
-    requestSummary: string[]
-  ): Promise<string | null> {
+  private async generateCallInBanterText(segmentType: SegmentType, requestSummary: string[]): Promise<string | null> {
     const { banterEngine } = this.services;
     if (!banterEngine) return null;
 
@@ -688,11 +672,7 @@ export class StationControls {
    * Generate banter + TTS, fade out music, play banter, then optionally skip to next track.
    * When skipToNext is true the requested track (already queued) starts after the DJ clip.
    */
-  private async playCallInBanterNow(
-    segmentType: SegmentType,
-    requestSummary: string[],
-    skipToNext: boolean
-  ): Promise<void> {
+  private async playCallInBanterNow(segmentType: SegmentType, requestSummary: string[], skipToNext: boolean): Promise<void> {
     const { banterEngine, voiceEngine } = this.services;
     if (!banterEngine || !voiceEngine) return;
 
@@ -737,7 +717,9 @@ export class StationControls {
       // ── Fade music out completely ──
       try {
         savedVolume = await this.services.spotifyPlayer.getVolume();
-      } catch { savedVolume = 0.8; }
+      } catch {
+        savedVolume = 0.8;
+      }
       await this.fadeSpotifyVolume(savedVolume, 0, 2_000);
 
       // ── Play the DJ clip over silence ──
@@ -787,13 +769,7 @@ export class StationControls {
 
   private checkCallInFulfillment(track: { id: string; title: string; artistName: string; uri?: string }): void {
     const requests = appStore.get("requests").requests;
-    const matched = requests.find(
-      (r) =>
-        r.status === "accepted" &&
-        r.spotifyUri &&
-        track.uri &&
-        r.spotifyUri === track.uri
-    );
+    const matched = requests.find((r) => r.status === "accepted" && r.spotifyUri && track.uri && r.spotifyUri === track.uri);
 
     if (matched) {
       const callerLabel = matched.callerName ?? "A listener";
@@ -803,36 +779,30 @@ export class StationControls {
       });
 
       // Mark as fulfilled
-      this.services.requestManager
-        .updateStatus(matched.id, "fulfilled", true, false)
-        .catch(console.error);
+      this.services.requestManager.updateStatus(matched.id, "fulfilled", true, false).catch(console.error);
       matched.status = "fulfilled";
       matched.spokenAcknowledgement = true;
       this.refreshRequestStore();
 
       // Add summary so the DJ references the caller in the next transition
-      this.processedCallInSummaries.push(
-        `This track was requested by ${callerLabel}. Give them a shout-out!`
-      );
+      this.processedCallInSummaries.push(`This track was requested by ${callerLabel}. Give them a shout-out!`);
     }
   }
 
   private refreshRequestStore(): void {
     if (!this.sessionId) return;
-    this.services.requestManager.getAll(this.sessionId).then((all) => {
-      appStore.update("requests", {
-        requests: all,
-        pendingCount: all.filter((r) => r.status === "pending").length,
-      });
-    }).catch(console.error);
+    this.services.requestManager
+      .getAll(this.sessionId)
+      .then((all) => {
+        appStore.update("requests", {
+          requests: all,
+          pendingCount: all.filter((r) => r.status === "pending").length,
+        });
+      })
+      .catch(console.error);
   }
 }
 
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

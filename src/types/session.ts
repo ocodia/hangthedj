@@ -1,12 +1,6 @@
 import type { Track } from "./track";
 
-export type StationMood =
-  | "late-night"
-  | "upbeat"
-  | "nostalgic"
-  | "focus"
-  | "indie-evening"
-  | "freestyle";
+export type StationMood = "late-night" | "upbeat" | "nostalgic" | "focus" | "indie-evening" | "freestyle";
 
 export interface SessionRecord {
   id: string;

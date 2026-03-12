@@ -81,10 +81,7 @@ export class RequestLinePanel {
     btn.disabled = true;
 
     try {
-      const request = await this.services.requestManager.submit(
-        session.activeSession.id,
-        submission
-      );
+      const request = await this.services.requestManager.submit(session.activeSession.id, submission);
 
       feedback.style.display = "block";
       feedback.className = "request-feedback";
@@ -104,7 +101,9 @@ export class RequestLinePanel {
       feedback.textContent = err instanceof Error ? err.message : "Request failed.";
     } finally {
       btn.disabled = false;
-      setTimeout(() => { feedback.style.display = "none"; }, 4000);
+      setTimeout(() => {
+        feedback.style.display = "none";
+      }, 4000);
     }
   }
 
@@ -118,18 +117,20 @@ export class RequestLinePanel {
       return;
     }
 
-    const recent = [...requests]
-      .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
-      .slice(0, 5);
+    const recent = [...requests].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).slice(0, 5);
 
     history.innerHTML = `
       <h4 style="margin-top:1rem;margin-bottom:0.5rem;font-size:0.9rem">Recent requests</h4>
       <ul class="request-list">
-        ${recent.map((r) => `
+        ${recent
+          .map(
+            (r) => `
           <li class="request-item status-${r.status}">
             <span class="request-artist">${escapeHtml(r.artistName)}</span>
             <span class="request-status muted">${r.status}</span>
-          </li>`).join("")}
+          </li>`,
+          )
+          .join("")}
       </ul>
     `;
   }
@@ -141,10 +142,5 @@ export class RequestLinePanel {
 }
 
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

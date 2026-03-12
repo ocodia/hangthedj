@@ -33,9 +33,10 @@ function buildUserPrompt(req: BanterRequest): string {
 
   if (req.currentTrack) {
     // For transitions, the current track is the one finishing, not starting
-    const trackLabel = req.segmentType === "transition"
-      ? `Just finished playing: "${req.currentTrack.title}" by ${req.currentTrack.artistName}.`
-      : `Now playing: "${req.currentTrack.title}" by ${req.currentTrack.artistName}.`;
+    const trackLabel =
+      req.segmentType === "transition"
+        ? `Just finished playing: "${req.currentTrack.title}" by ${req.currentTrack.artistName}.`
+        : `Now playing: "${req.currentTrack.title}" by ${req.currentTrack.artistName}.`;
     parts.push(trackLabel);
   }
 
@@ -52,9 +53,7 @@ function buildUserPrompt(req: BanterRequest): string {
   }
 
   if (req.recentBanterSummaries.length > 0) {
-    parts.push(
-      `Avoid repeating these recent topics/phrases: ${req.recentBanterSummaries.slice(0, 5).join("; ")}.`
-    );
+    parts.push(`Avoid repeating these recent topics/phrases: ${req.recentBanterSummaries.slice(0, 5).join("; ")}.`);
   }
 
   // Segment type instruction
@@ -63,52 +62,38 @@ function buildUserPrompt(req: BanterRequest): string {
       if (req.nextTrack) {
         parts.push(
           `Up next is "${req.nextTrack.title}" by ${req.nextTrack.artistName}. ` +
-          "Deliver a brief between-track DJ comment about the track that just played, " +
-          "then hype the upcoming track. Keep it natural and conversational."
+            "Deliver a brief between-track DJ comment about the track that just played, " +
+            "then hype the upcoming track. Keep it natural and conversational.",
         );
       } else {
         parts.push(
           "Deliver a brief between-track DJ comment about the track that just played. " +
-          "React to it, share a quick thought, or hype the vibe. " +
-          "Do NOT announce or name the next track — you don't know what it is. Keep it natural."
+            "React to it, share a quick thought, or hype the vibe. " +
+            "Do NOT announce or name the next track — you don't know what it is. Keep it natural.",
         );
       }
       break;
     case "requestAcknowledgement":
-      parts.push(
-        "Acknowledge the listener request warmly. Mention the caller name and/or artist if available."
-      );
+      parts.push("Acknowledge the listener request warmly. Mention the caller name and/or artist if available.");
       break;
     case "requestRefusal":
-      parts.push(
-        "Decline a listener request in character — politely but with personality. Don't be rude."
-      );
+      parts.push("Decline a listener request in character — politely but with personality. Don't be rude.");
       break;
     case "requestDeferment":
-      parts.push(
-        "Acknowledge a request but don't commit — keep it vague and in character."
-      );
+      parts.push("Acknowledge a request but don't commit — keep it vague and in character.");
       break;
     case "vibeSetting":
-      parts.push(
-        "Set the vibe for this moment with a short atmospheric line. No track introduction needed."
-      );
+      parts.push("Set the vibe for this moment with a short atmospheric line. No track introduction needed.");
       break;
     case "stationIdent":
-      parts.push(
-        "Deliver a brief station ident — who you are, what the station is. Keep it punchy."
-      );
+      parts.push("Deliver a brief station ident — who you are, what the station is. Keep it punchy.");
       break;
     case "artistIntroduction":
-      parts.push(
-        "Introduce the current or next artist. Keep it exciting and personal."
-      );
+      parts.push("Introduce the current or next artist. Keep it exciting and personal.");
       break;
   }
 
-  parts.push(
-    `Keep it under ${req.constraints.maxWords} words. Spoken audio only — no stage directions.`
-  );
+  parts.push(`Keep it under ${req.constraints.maxWords} words. Spoken audio only — no stage directions.`);
 
   if (req.constraints.factualityMode === "grounded") {
     parts.push("Keep factual claims accurate — don't invent facts about artists.");
@@ -128,7 +113,7 @@ class BanterEngineImpl implements IBanterEngine {
 
   constructor(
     apiKey: string,
-    private personaService: PersonaService
+    private personaService: PersonaService,
   ) {
     // dangerouslyAllowBrowser: true is required for direct browser use.
     // This is intentional — the key is user-supplied and user-managed.
@@ -168,9 +153,6 @@ class BanterEngineImpl implements IBanterEngine {
   }
 }
 
-export function createBanterEngine(
-  apiKey: string,
-  personaService: PersonaService
-): IBanterEngine {
+export function createBanterEngine(apiKey: string, personaService: PersonaService): IBanterEngine {
   return new BanterEngineImpl(apiKey, personaService);
 }

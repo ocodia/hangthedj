@@ -1,9 +1,4 @@
-export type RequestStatus =
-  | "pending"
-  | "accepted"
-  | "deferred"
-  | "rejected"
-  | "fulfilled";
+export type RequestStatus = "pending" | "accepted" | "deferred" | "rejected" | "fulfilled";
 
 export interface ListenerRequest {
   id: string;
