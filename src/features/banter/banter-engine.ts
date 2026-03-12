@@ -99,7 +99,7 @@ function buildUserPrompt(req: BanterRequest): string {
   if (req.constraints.factualityMode === "grounded") {
     parts.push("Keep factual claims accurate — don't invent facts about artists.");
   } else if (req.constraints.factualityMode === "playful") {
-    parts.push("Prioritise personality over factual accuracy — make it fun.");
+    parts.push("Prioritize personality over factual accuracy — make it fun.");
   }
 
   return parts.join("\n");
