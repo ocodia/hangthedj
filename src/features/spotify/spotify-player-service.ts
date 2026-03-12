@@ -298,7 +298,7 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
     }
 
     // Interpolate: real position = last known + elapsed time (if playing)
-    const elapsed = this.lastIsPlaying ? (Date.now() - this.lastPositionTimestamp) : 0;
+    const elapsed = this.lastIsPlaying ? Date.now() - this.lastPositionTimestamp : 0;
     const progressMs = Math.min(this.lastPositionMs + elapsed, this.lastDurationMs);
 
     return {
@@ -368,8 +368,7 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
       script.src = SDK_SCRIPT_URL;
       script.async = true;
       script.onload = () => resolve();
-      script.onerror = () =>
-        reject(new Error("Failed to load Spotify Web Playback SDK — check network or ad blocker"));
+      script.onerror = () => reject(new Error("Failed to load Spotify Web Playback SDK — check network or ad blocker"));
       document.body.appendChild(script);
     });
   }

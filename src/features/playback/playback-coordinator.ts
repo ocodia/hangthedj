@@ -41,7 +41,7 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
 
   constructor(
     private spotifyPlayer: SpotifyPlayerService,
-    private djAudioPlayer: DJAudioPlayer
+    private djAudioPlayer: DJAudioPlayer,
   ) {}
 
   startMonitoring(): void {
@@ -135,12 +135,7 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
    * Smoothly interpolate Spotify volume between two levels.
    * Returns a promise that resolves when the fade is complete.
    */
-  private fadeVolume(
-    from: number,
-    to: number,
-    durationMs: number,
-    steps: number
-  ): Promise<void> {
+  private fadeVolume(from: number, to: number, durationMs: number, steps: number): Promise<void> {
     return new Promise<void>((resolve) => {
       let step = 0;
       const intervalMs = durationMs / steps;
@@ -159,9 +154,6 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
   }
 }
 
-export function createPlaybackCoordinator(
-  spotifyPlayer: SpotifyPlayerService,
-  djAudioPlayer: DJAudioPlayer
-): PlaybackCoordinator {
+export function createPlaybackCoordinator(spotifyPlayer: SpotifyPlayerService, djAudioPlayer: DJAudioPlayer): PlaybackCoordinator {
   return new PlaybackCoordinatorImpl(spotifyPlayer, djAudioPlayer);
 }

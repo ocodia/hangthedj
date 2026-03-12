@@ -33,9 +33,7 @@ export class NowPlayingBar {
     const remainingSec = Math.max(0, Math.round(remainingMs / 1000));
     const progressSec = Math.round(playback.progressMs / 1000);
     const durationSec = Math.round(playback.durationMs / 1000);
-    const pct = playback.durationMs > 0
-      ? Math.min(100, (playback.progressMs / playback.durationMs) * 100)
-      : 0;
+    const pct = playback.durationMs > 0 ? Math.min(100, (playback.progressMs / playback.durationMs) * 100) : 0;
 
     const nextTrack = playback.nextTrack;
     const coordinatorState = playback.coordinator;
@@ -72,10 +70,5 @@ function formatTime(totalSeconds: number): string {
 }
 
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

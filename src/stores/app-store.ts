@@ -94,10 +94,7 @@ class AppStoreImpl {
     }
   }
 
-  subscribe<K extends SliceKey>(
-    key: K,
-    listener: StoreListener<AppStore[K]>
-  ): () => void {
+  subscribe<K extends SliceKey>(key: K, listener: StoreListener<AppStore[K]>): () => void {
     if (!this.listeners.has(key)) {
       this.listeners.set(key, new Set());
     }

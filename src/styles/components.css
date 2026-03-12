@@ -324,9 +324,15 @@
   font-size: 0.75rem;
 }
 
-.status-accepted .request-status { color: var(--color-accent); }
-.status-rejected .request-status { color: var(--color-error); }
-.status-fulfilled .request-status { color: var(--color-accent); }
+.status-accepted .request-status {
+  color: var(--color-accent);
+}
+.status-rejected .request-status {
+  color: var(--color-error);
+}
+.status-fulfilled .request-status {
+  color: var(--color-accent);
+}
 
 /* ─── Settings Panel ──────────────────────────────────────────────── */
 

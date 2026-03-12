@@ -12,14 +12,7 @@
  */
 
 import type { AppServices } from "@/app/app-shell";
-import {
-  appStore,
-  updateSessionState,
-  updateAiState,
-  updatePlaybackState,
-  addDjActivityEntry,
-  clearDjActivity,
-} from "@/stores/app-store";
+import { appStore, updateSessionState, updateAiState, updatePlaybackState, addDjActivityEntry, clearDjActivity } from "@/stores/app-store";
 import { saveSession } from "@/features/storage/storage-service";
 import { v4 as uuidv4 } from "uuid";
 import type { StationMood } from "@/types/session";
@@ -62,10 +55,7 @@ export class StationControls {
     const ai = appStore.get("ai");
     const spotify = appStore.get("spotify");
 
-    const moodOptions = MOODS.map(
-      (m) =>
-        `<option value="${m.value}" ${m.value === "freestyle" ? "selected" : ""}>${m.label}</option>`
-    ).join("");
+    const moodOptions = MOODS.map((m) => `<option value="${m.value}" ${m.value === "freestyle" ? "selected" : ""}>${m.label}</option>`).join("");
 
     this.element.innerHTML = `
       <div class="station-header">
@@ -81,10 +71,11 @@ export class StationControls {
       ${!ai.hasOpenAiKey ? `<p class="muted" style="font-size:0.8rem">Set your OpenAI key in Settings to enable DJ banter.</p>` : ""}
       ${!spotify.isConnected && !session.isRunning ? `<p class="muted" style="font-size:0.8rem">Connect Spotify to start a session.</p>` : ""}
       <div class="station-actions">
-        ${session.isRunning
-          ? `<button class="danger" id="btn-stop">Stop Session</button>
+        ${
+          session.isRunning
+            ? `<button class="danger" id="btn-stop">Stop Session</button>
              <button id="btn-debug-skip" style="margin-left:0.5rem;background:#555;color:#ff0;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px dashed #ff0;border-radius:4px;cursor:pointer" title="Skip to ~12s before end of track">⏩ Skip to banter</button>`
-          : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Start Session</button>`
+            : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Start Session</button>`
         }
       </div>
       <div class="dj-status muted" id="dj-status">
@@ -177,30 +168,28 @@ export class StationControls {
     }
 
     // 4. Subscribe to track changes (for logging + recent tracks)
-    this.unsubscribeTrackChange = this.services.spotifyPlayer.onTrackChange(
-      (track) => {
-        if (!track || !this.sessionId) return;
-        updatePlaybackState({ currentTrack: track });
-        this.services.scheduler.recordTrackChange();
+    this.unsubscribeTrackChange = this.services.spotifyPlayer.onTrackChange((track) => {
+      if (!track || !this.sessionId) return;
+      updatePlaybackState({ currentTrack: track });
+      this.services.scheduler.recordTrackChange();
 
-        // Log the new track in the activity feed
-        addDjActivityEntry({
-          type: "track",
-          text: `🎵 Now playing: "${track.title}" by ${track.artistName}`,
-        });
+      // Log the new track in the activity feed
+      addDjActivityEntry({
+        type: "track",
+        text: `🎵 Now playing: "${track.title}" by ${track.artistName}`,
+      });
 
-        // Update recent tracks
-        const current = appStore.get("playback");
-        updatePlaybackState({
-          recentTracks: [track, ...current.recentTracks].slice(0, 10),
-        });
+      // Update recent tracks
+      const current = appStore.get("playback");
+      updatePlaybackState({
+        recentTracks: [track, ...current.recentTracks].slice(0, 10),
+      });
 
-        // Reset banter evaluation flags for the new track
-        this.banterEvaluatedForTrackId = null;
-        this.pendingTransition = null;
-        this.pendingTransitionForTrackId = null;
-      }
-    );
+      // Reset banter evaluation flags for the new track
+      this.banterEvaluatedForTrackId = null;
+      this.pendingTransition = null;
+      this.pendingTransitionForTrackId = null;
+    });
 
     // 5. Start position monitor (polls every 1 s)
     this.startPositionMonitor();
@@ -325,7 +314,9 @@ export class StationControls {
 
     // Debug: log every ~5 seconds so we can see the monitor is alive
     if (remaining > 0 && remaining % 5000 < 1100) {
-      console.log(`[PositionMonitor] ${Math.round(remaining / 1000)}s remaining | preparing=${this.isPreparingBanter} | hasPending=${!!this.pendingTransition} | coordinator=${this.services.coordinator.getState()}`);
+      console.log(
+        `[PositionMonitor] ${Math.round(remaining / 1000)}s remaining | preparing=${this.isPreparingBanter} | hasPending=${!!this.pendingTransition} | coordinator=${this.services.coordinator.getState()}`,
+      );
     }
 
     // ── Phase 1: Pre-generate banter when < 30s remaining ──────────────────
@@ -406,7 +397,7 @@ export class StationControls {
       this.sessionMood,
       [],
       [],
-      appStore.get("settings").schedulerConfig
+      appStore.get("settings").schedulerConfig,
     );
 
     console.log("[Banter] Scheduler decision:", decision);
@@ -453,9 +444,7 @@ export class StationControls {
       console.log("[Banter] Voice rendered, caching for playback");
       updateAiState({ isRendering: false });
 
-      const trackInfo = currentTrack
-        ? ` [after "${currentTrack.title}" by ${currentTrack.artistName}]`
-        : "";
+      const trackInfo = currentTrack ? ` [after "${currentTrack.title}" by ${currentTrack.artistName}]` : "";
 
       // Cache the result — Phase 2 will play it when the track is about to end
       this.pendingTransition = {
