@@ -1,6 +1,6 @@
 import type { SegmentType } from "./banter";
 
-export type DjFrequency = "rarely" | "sometimes" | "often";
+export type DjFrequency = "every" | "rarely" | "sometimes" | "often";
 export type RequestBehaviour = "responsive" | "editorial";
 
 export interface SchedulerConfig {

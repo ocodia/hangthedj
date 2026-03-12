@@ -346,6 +346,10 @@
   border-left: 2px solid #555;
 }
 
+.log-entry--track {
+  border-left: 2px solid #6366f1;
+}
+
 .log-time {
   flex-shrink: 0;
   font-size: 0.75rem;

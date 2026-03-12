@@ -30,6 +30,7 @@ interface CooldownConfig {
 }
 
 const COOLDOWNS: Record<DjFrequency, CooldownConfig> = {
+  every: { minTracksBetweenDJ: 0, minMsBetweenDJ: 0, maxInsertionsPerHour: 999 },
   rarely: { minTracksBetweenDJ: 4, minMsBetweenDJ: 5 * 60_000, maxInsertionsPerHour: 6 },
   sometimes: { minTracksBetweenDJ: 2, minMsBetweenDJ: 3 * 60_000, maxInsertionsPerHour: 15 },
   often: { minTracksBetweenDJ: 1, minMsBetweenDJ: 90_000, maxInsertionsPerHour: 25 },
@@ -104,40 +105,43 @@ class StationSchedulerImpl implements StationScheduler {
       this.state.hourWindowStart = now;
     }
 
-    // Hard stop: hourly limit reached
-    if (this.state.insertionCountThisHour >= cooldown.maxInsertionsPerHour) {
-      return {
-        shouldInsert: false,
-        segmentType: null,
-        urgency: "low",
-        requestToAcknowledge: null,
-        reason: `Hourly insertion limit (${cooldown.maxInsertionsPerHour}) reached`,
-      };
-    }
+    // "every" mode: skip all cooldown checks entirely (debug mode)
+    if (config.djFrequency !== "every") {
+      // Hard stop: hourly limit reached
+      if (this.state.insertionCountThisHour >= cooldown.maxInsertionsPerHour) {
+        return {
+          shouldInsert: false,
+          segmentType: null,
+          urgency: "low",
+          requestToAcknowledge: null,
+          reason: `Hourly insertion limit (${cooldown.maxInsertionsPerHour}) reached`,
+        };
+      }
 
-    // Track cooldown check
-    if (this.state.tracksSinceLastInsert < cooldown.minTracksBetweenDJ) {
-      return {
-        shouldInsert: false,
-        segmentType: null,
-        urgency: "low",
-        requestToAcknowledge: null,
-        reason: `Tracks since last insert (${this.state.tracksSinceLastInsert}) < min (${cooldown.minTracksBetweenDJ})`,
-      };
-    }
+      // Track cooldown check
+      if (this.state.tracksSinceLastInsert < cooldown.minTracksBetweenDJ) {
+        return {
+          shouldInsert: false,
+          segmentType: null,
+          urgency: "low",
+          requestToAcknowledge: null,
+          reason: `Tracks since last insert (${this.state.tracksSinceLastInsert}) < min (${cooldown.minTracksBetweenDJ})`,
+        };
+      }
 
-    // Time cooldown check
-    if (
-      this.state.lastInsertionAt !== null &&
-      now - this.state.lastInsertionAt < cooldown.minMsBetweenDJ
-    ) {
-      return {
-        shouldInsert: false,
-        segmentType: null,
-        urgency: "low",
-        requestToAcknowledge: null,
-        reason: "Time since last insertion is below minimum",
-      };
+      // Time cooldown check
+      if (
+        this.state.lastInsertionAt !== null &&
+        now - this.state.lastInsertionAt < cooldown.minMsBetweenDJ
+      ) {
+        return {
+          shouldInsert: false,
+          segmentType: null,
+          urgency: "low",
+          requestToAcknowledge: null,
+          reason: "Time since last insertion is below minimum",
+        };
+      }
     }
 
     // ── Decide segment type ──────────────────────────────────────────────────
@@ -172,8 +176,12 @@ class StationSchedulerImpl implements StationScheduler {
       };
     }
 
-    // 3. Persona verbosity adjustment
-    if (persona.verbosity === "brief" && this.state.tracksSinceLastInsert < 3) {
+    // 3. Persona verbosity adjustment (skipped when djFrequency is "every")
+    if (
+      config.djFrequency !== "every" &&
+      persona.verbosity === "brief" &&
+      this.state.tracksSinceLastInsert < 3
+    ) {
       return {
         shouldInsert: false,
         segmentType: null,

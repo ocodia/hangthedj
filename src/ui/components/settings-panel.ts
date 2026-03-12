@@ -67,9 +67,10 @@ export class SettingsPanel {
         <div class="field">
           <label for="dj-frequency">DJ Frequency</label>
           <select id="dj-frequency">
-            <option value="rarely">Rarely (every 4+ tracks)</option>
-            <option value="sometimes" selected>Sometimes (every 2+ tracks)</option>
-            <option value="often">Often (every track)</option>
+            <option value="every" ${appStore.get("settings").schedulerConfig.djFrequency === "every" ? "selected" : ""}>After Every Track (debug)</option>
+            <option value="rarely" ${appStore.get("settings").schedulerConfig.djFrequency === "rarely" ? "selected" : ""}>Rarely (every 4+ tracks)</option>
+            <option value="sometimes" ${appStore.get("settings").schedulerConfig.djFrequency === "sometimes" ? "selected" : ""}>Sometimes (every 2+ tracks)</option>
+            <option value="often" ${appStore.get("settings").schedulerConfig.djFrequency === "often" ? "selected" : ""}>Often (every track)</option>
           </select>
         </div>
         <div class="field">
@@ -114,7 +115,7 @@ export class SettingsPanel {
     });
 
     this.element.querySelector<HTMLSelectElement>("#dj-frequency")?.addEventListener("change", (e) => {
-      const freq = (e.target as HTMLSelectElement).value as "rarely" | "sometimes" | "often";
+      const freq = (e.target as HTMLSelectElement).value as "every" | "rarely" | "sometimes" | "often";
       const current = loadSettings();
       const updated = { ...current, schedulerConfig: { ...current.schedulerConfig, djFrequency: freq } };
       saveSettings(updated);

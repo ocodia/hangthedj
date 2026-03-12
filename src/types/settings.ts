@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   activePersonaId: null,
   defaultMood: "freestyle",
   schedulerConfig: {
-    djFrequency: "sometimes",
+    djFrequency: "every",
     requestBehaviour: "responsive",
     familySafe: true,
   },

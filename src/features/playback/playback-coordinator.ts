@@ -69,13 +69,19 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
         // Fall through to resume music regardless
       }
 
-      // Resume Spotify
+      // Skip to next track and resume Spotify.
+      // We don't just resume() because there may be a tail-end of the old
+      // track left — skipping ensures a clean start on the next track.
       this.setState("resumingPlayback");
       try {
-        await this.spotifyPlayer.resume();
+        await this.spotifyPlayer.nextTrack();
       } catch (err) {
-        console.error("[PlaybackCoordinator] Resume failed:", err);
-        // Best effort — log but don't throw; the user can manually resume
+        console.warn("[PlaybackCoordinator] nextTrack failed, trying resume:", err);
+        try {
+          await this.spotifyPlayer.resume();
+        } catch (resumeErr) {
+          console.error("[PlaybackCoordinator] Resume also failed:", resumeErr);
+        }
       }
 
       this.setState("monitoring");

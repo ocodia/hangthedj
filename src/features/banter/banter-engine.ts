@@ -32,9 +32,11 @@ function buildUserPrompt(req: BanterRequest): string {
   if (mood) parts.push(mood);
 
   if (req.currentTrack) {
-    parts.push(
-      `Now playing: "${req.currentTrack.title}" by ${req.currentTrack.artistName}.`
-    );
+    // For transitions, the current track is the one finishing, not starting
+    const trackLabel = req.segmentType === "transition"
+      ? `Just finished playing: "${req.currentTrack.title}" by ${req.currentTrack.artistName}.`
+      : `Now playing: "${req.currentTrack.title}" by ${req.currentTrack.artistName}.`;
+    parts.push(trackLabel);
   }
 
   if (req.recentTracks.length > 0) {
@@ -58,7 +60,11 @@ function buildUserPrompt(req: BanterRequest): string {
   // Segment type instruction
   switch (req.segmentType) {
     case "transition":
-      parts.push("Deliver a brief between-track DJ comment. Keep it natural.");
+      parts.push(
+        "Deliver a brief between-track DJ comment about the track that just played. " +
+        "React to it, share a quick thought, or hype the vibe. " +
+        "Do NOT announce or name the next track — you don't know what it is. Keep it natural."
+      );
       break;
     case "requestAcknowledgement":
       parts.push(

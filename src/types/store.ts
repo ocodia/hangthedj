@@ -53,6 +53,16 @@ export interface AiState {
   lastError: string | null;
 }
 
+export interface DjActivityEntry {
+  time: string;
+  text: string;
+  type: "dj" | "system" | "error" | "track";
+}
+
+export interface DjActivityState {
+  entries: DjActivityEntry[];
+}
+
 export interface AppStore {
   auth: AuthState;
   spotify: SpotifyState;
@@ -63,4 +73,5 @@ export interface AppStore {
   persona: PersonaState;
   ai: AiState;
   settings: AppSettings;
+  djActivity: DjActivityState;
 }

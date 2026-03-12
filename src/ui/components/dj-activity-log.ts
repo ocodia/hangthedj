@@ -1,48 +1,30 @@
 /**
  * DjActivityLog: shows recent DJ banter lines and activity.
+ *
+ * Reads from the centralized djActivity store slice.
  */
 
 import { appStore } from "@/stores/app-store";
-
-interface LogEntry {
-  time: string;
-  text: string;
-  type: "dj" | "system" | "error";
-}
+import type { DjActivityEntry } from "@/types/store";
 
 export class DjActivityLog {
   element: HTMLElement;
-  private entries: LogEntry[] = [];
 
   constructor() {
     this.element = document.createElement("div");
     this.element.className = "dj-activity-log panel";
-    this.render();
+    this.render([]);
 
-    appStore.subscribe("ai", (ai) => {
-      if (ai.lastError) {
-        this.addEntry({ type: "error", text: `Error: ${ai.lastError}` });
-      }
-    });
-
-    appStore.subscribe("playback", (playback) => {
-      if (playback.coordinator === "playingDjClip") {
-        this.addEntry({ type: "system", text: "Playing DJ clip..." });
-      }
+    appStore.subscribe("djActivity", (activity) => {
+      this.render(activity.entries);
     });
   }
 
-  addEntry(entry: Omit<LogEntry, "time">): void {
-    this.entries.unshift({ ...entry, time: new Date().toLocaleTimeString() });
-    this.entries = this.entries.slice(0, 20);
-    this.render();
-  }
-
-  private render(): void {
+  private render(entries: DjActivityEntry[]): void {
     const entryHtml =
-      this.entries.length === 0
+      entries.length === 0
         ? `<p class="muted" style="font-size:0.85rem">DJ activity will appear here once a session starts.</p>`
-        : this.entries
+        : entries
             .map(
               (e) => `
           <div class="log-entry log-entry--${e.type}">

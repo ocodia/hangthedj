@@ -35,6 +35,8 @@ declare namespace Spotify {
     disconnect(): void;
     pause(): Promise<void>;
     resume(): Promise<void>;
+    seek(positionMs: number): Promise<void>;
+    nextTrack(): Promise<void>;
     getCurrentState(): Promise<WebPlaybackState | null>;
   }
   interface PlayerOptions {
@@ -75,10 +77,13 @@ export interface SpotifyPlayerService {
   getPlaybackState(): PlaybackState | null;
   pause(): Promise<void>;
   resume(): Promise<void>;
+  seek(positionMs: number): Promise<void>;
+  nextTrack(): Promise<void>;
   transferPlayback(): Promise<void>;
   onStateChange(handler: (state: PlaybackState) => void): () => void;
   onTrackChange(handler: (track: Track | null) => void): () => void;
   getDeviceId(): string | null;
+  fetchCurrentPosition(): Promise<{ progressMs: number; durationMs: number; isPlaying: boolean } | null>;
 }
 
 class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
@@ -90,6 +95,13 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
 
   private stateChangeHandlers: Array<(state: PlaybackState) => void> = [];
   private trackChangeHandlers: Array<(track: Track | null) => void> = [];
+
+  // Position interpolation: the SDK only reports position at state-change events,
+  // so we record the timestamp and calculate real-time position ourselves.
+  private lastPositionMs = 0;
+  private lastPositionTimestamp = 0;
+  private lastDurationMs = 0;
+  private lastIsPlaying = false;
 
   async initialize(authService: SpotifyAuthService): Promise<void> {
     this.authService = authService;
@@ -182,6 +194,16 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
     await this.player.pause();
   }
 
+  async seek(positionMs: number): Promise<void> {
+    if (!this.player) throw new Error("Player not initialized");
+    await this.player.seek(positionMs);
+  }
+
+  async nextTrack(): Promise<void> {
+    if (!this.player) throw new Error("Player not initialized");
+    await this.player.nextTrack();
+  }
+
   async resume(): Promise<void> {
     if (!this.player) throw new Error("Player not initialized");
     await this.player.resume();
@@ -237,6 +259,35 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
     return this.deviceId;
   }
 
+  async fetchCurrentPosition(): Promise<{ progressMs: number; durationMs: number; isPlaying: boolean } | null> {
+    // If we haven't received any state events yet, fall back to SDK query
+    if (this.lastPositionTimestamp === 0) {
+      if (!this.player) return null;
+      const state = await this.player.getCurrentState();
+      if (!state) return null;
+      // Seed interpolation state from this first query
+      this.lastPositionMs = state.position;
+      this.lastDurationMs = state.duration;
+      this.lastIsPlaying = !state.paused;
+      this.lastPositionTimestamp = Date.now();
+      return {
+        progressMs: state.position,
+        durationMs: state.duration,
+        isPlaying: !state.paused,
+      };
+    }
+
+    // Interpolate: real position = last known + elapsed time (if playing)
+    const elapsed = this.lastIsPlaying ? (Date.now() - this.lastPositionTimestamp) : 0;
+    const progressMs = Math.min(this.lastPositionMs + elapsed, this.lastDurationMs);
+
+    return {
+      progressMs,
+      durationMs: this.lastDurationMs,
+      isPlaying: this.lastIsPlaying,
+    };
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Private helpers
   // ──────────────────────────────────────────────────────────────────────────
@@ -244,6 +295,12 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   private handleStateChange(sdkState: Spotify.WebPlaybackState): void {
     const sdkTrack = sdkState.track_window.current_track;
     const track = sdkTrack ? this.normalizeTrack(sdkTrack) : null;
+
+    // Update interpolation state on every SDK event
+    this.lastPositionMs = sdkState.position;
+    this.lastDurationMs = sdkState.duration;
+    this.lastIsPlaying = !sdkState.paused;
+    this.lastPositionTimestamp = Date.now();
 
     const state: PlaybackState = {
       isPlaying: !sdkState.paused,

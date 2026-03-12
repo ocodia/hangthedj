@@ -17,6 +17,8 @@ import type {
   RequestState,
   PersonaState,
   AiState,
+  DjActivityEntry,
+  DjActivityState,
 } from "@/types/store";
 import type { AppSettings } from "@/types/settings";
 import { DEFAULT_SETTINGS } from "@/types/settings";
@@ -66,6 +68,9 @@ function createInitialStore(): AppStore {
       lastError: null,
     },
     settings: { ...DEFAULT_SETTINGS },
+    djActivity: {
+      entries: [],
+    },
   };
 }
 
@@ -182,4 +187,24 @@ export function getSettings(): AppSettings {
 
 export function updateSettings(patch: Partial<AppSettings>): void {
   appStore.update("settings", patch);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DJ Activity Log helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+export function getDjActivity(): DjActivityState {
+  return appStore.get("djActivity");
+}
+
+export function addDjActivityEntry(entry: Omit<DjActivityEntry, "time">): void {
+  const current = appStore.get("djActivity");
+  const newEntry: DjActivityEntry = { ...entry, time: new Date().toLocaleTimeString() };
+  appStore.update("djActivity", {
+    entries: [newEntry, ...current.entries].slice(0, 50),
+  });
+}
+
+export function clearDjActivity(): void {
+  appStore.update("djActivity", { entries: [] });
 }
