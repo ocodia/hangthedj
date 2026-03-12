@@ -13,6 +13,8 @@ export interface SessionRecord {
   startedAt: string;
   endedAt?: string;
   mood: StationMood;
+  /** Free-text mood prompt passed to the banter engine */
+  moodPrompt?: string;
   personaId: string;
 }
 

@@ -62,7 +62,7 @@ export interface AiState {
 export interface DjActivityEntry {
   time: string;
   text: string;
-  type: "dj" | "system" | "error" | "track";
+  type: "dj" | "system" | "error" | "track" | "call-in";
 }
 
 export interface DjActivityState {

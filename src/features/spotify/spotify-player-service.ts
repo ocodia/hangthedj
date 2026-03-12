@@ -89,6 +89,8 @@ export interface SpotifyPlayerService {
   getDeviceId(): string | null;
   getNextTrack(): Track | null;
   fetchCurrentPosition(): Promise<{ progressMs: number; durationMs: number; isPlaying: boolean } | null>;
+  searchTrack(query: string): Promise<Track | null>;
+  addToQueue(trackUri: string): Promise<void>;
 }
 
 class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
@@ -97,7 +99,7 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   private deviceId: string | null = null;
   private currentState: PlaybackState | null = null;
   private currentTrack: Track | null = null;
-  private nextTrack: Track | null = null;
+  private _nextTrackInfo: Track | null = null;
 
   private stateChangeHandlers: Array<(state: PlaybackState) => void> = [];
   private trackChangeHandlers: Array<(track: Track | null) => void> = [];
@@ -276,7 +278,7 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
   }
 
   getNextTrack(): Track | null {
-    return this.nextTrack;
+    return this._nextTrackInfo;
   }
 
   async fetchCurrentPosition(): Promise<{ progressMs: number; durationMs: number; isPlaying: boolean } | null> {
@@ -317,8 +319,8 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
     const track = sdkTrack ? this.normalizeTrack(sdkTrack) : null;
 
     // Capture next track from the SDK track window
-    const sdkNextTrack = sdkState.track_window.next_tracks[0];
-    this.nextTrack = sdkNextTrack ? this.normalizeTrack(sdkNextTrack) : null;
+    const sdkNextTrack = (sdkState.track_window as { current_track: Spotify.WebPlaybackTrack; next_tracks: Spotify.WebPlaybackTrack[] }).next_tracks[0];
+    this._nextTrackInfo = sdkNextTrack ? this.normalizeTrack(sdkNextTrack) : null;
 
     // Update interpolation state on every SDK event
     this.lastPositionMs = sdkState.position;
@@ -371,6 +373,53 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
       script.onerror = () => reject(new Error("Failed to load Spotify Web Playback SDK — check network or ad blocker"));
       document.body.appendChild(script);
     });
+  }
+
+  async searchTrack(query: string): Promise<Track | null> {
+    if (!this.authService) throw new Error("Auth service not available");
+    const token = await this.authService.getAccessToken();
+    if (!token) throw new Error("No access token available");
+
+    const params = new URLSearchParams({ q: query, type: "track", limit: "1" });
+    const res = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Spotify search failed: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    const item = data?.tracks?.items?.[0];
+    if (!item) return null;
+
+    return {
+      id: item.id,
+      title: item.name,
+      artistName: item.artists?.map((a: { name: string }) => a.name).join(", ") ?? "Unknown",
+      albumName: item.album?.name,
+      durationMs: item.duration_ms,
+      artworkUrl: item.album?.images?.[0]?.url,
+      uri: item.uri,
+    };
+  }
+
+  async addToQueue(trackUri: string): Promise<void> {
+    if (!this.authService) throw new Error("Auth service not available");
+    const token = await this.authService.getAccessToken();
+    if (!token) throw new Error("No access token available");
+
+    const params = new URLSearchParams({ uri: trackUri });
+    const res = await fetch(`https://api.spotify.com/v1/me/player/queue?${params.toString()}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const text = await res.text();
+      throw new Error(`Add to queue failed: ${res.status} ${text}`);
+    }
   }
 }
 

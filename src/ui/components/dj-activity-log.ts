@@ -30,7 +30,7 @@ export class DjActivityLog {
           <div class="log-entry log-entry--${e.type}">
             <span class="log-time muted">${e.time}</span>
             <span class="log-text">${escapeHtml(e.text)}</span>
-          </div>`
+          </div>`,
             )
             .join("");
 
@@ -42,10 +42,5 @@ export class DjActivityLog {
 }
 
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

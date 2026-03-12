@@ -60,11 +60,19 @@ function buildUserPrompt(req: BanterRequest): string {
   // Segment type instruction
   switch (req.segmentType) {
     case "transition":
-      parts.push(
-        "Deliver a brief between-track DJ comment about the track that just played. " +
-        "React to it, share a quick thought, or hype the vibe. " +
-        "Do NOT announce or name the next track — you don't know what it is. Keep it natural."
-      );
+      if (req.nextTrack) {
+        parts.push(
+          `Up next is "${req.nextTrack.title}" by ${req.nextTrack.artistName}. ` +
+          "Deliver a brief between-track DJ comment about the track that just played, " +
+          "then hype the upcoming track. Keep it natural and conversational."
+        );
+      } else {
+        parts.push(
+          "Deliver a brief between-track DJ comment about the track that just played. " +
+          "React to it, share a quick thought, or hype the vibe. " +
+          "Do NOT announce or name the next track — you don't know what it is. Keep it natural."
+        );
+      }
       break;
     case "requestAcknowledgement":
       parts.push(

@@ -72,6 +72,7 @@ class RequestLineManagerImpl implements RequestLineManager {
       status: "pending",
       spokenAcknowledgement: false,
       promisedForLater: false,
+      playNow: submission.playNow ?? false,
     };
 
     if (!request.artistName) {

@@ -411,6 +411,10 @@
   border-left: 2px solid #6366f1;
 }
 
+.log-entry--call-in {
+  border-left: 2px solid #f59e0b;
+}
+
 .log-time {
   flex-shrink: 0;
   font-size: 0.75rem;

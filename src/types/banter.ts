@@ -15,6 +15,8 @@ export interface BanterRequest {
   segmentType: SegmentType;
   stationMood?: string;
   currentTrack?: Track | null;
+  /** Next track in queue — used for transition banter to hype the upcoming song */
+  nextTrack?: Track | null;
   recentTracks: Track[];
   /** Compact summaries of pending/accepted requests */
   requestSummary: string[];

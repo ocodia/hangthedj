@@ -38,6 +38,11 @@ export class RequestLinePanel {
           <label for="message">Message (optional)</label>
           <textarea id="message" placeholder="Say something to the DJ..." maxlength="200" rows="2"></textarea>
         </div>
+        <div class="field" style="display:flex;align-items:center;gap:0.5rem">
+          <input type="checkbox" id="play-now" />
+          <label for="play-now" style="margin:0;font-size:0.85rem;cursor:pointer">Play right now</label>
+          <span class="muted" style="font-size:0.75rem">(DJ will interrupt and announce it)</span>
+        </div>
         <div id="request-feedback" class="request-feedback" style="display:none"></div>
         <button type="submit" id="btn-submit-request">Send Request</button>
       </form>
@@ -69,6 +74,7 @@ export class RequestLinePanel {
       artistName: this.getValue("artist-name") ?? "",
       trackName: this.getValue("track-name"),
       message: this.getValue("message"),
+      playNow: this.element.querySelector<HTMLInputElement>("#play-now")?.checked ?? false,
     };
 
     const btn = this.element.querySelector<HTMLButtonElement>("#btn-submit-request")!;
