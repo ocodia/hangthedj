@@ -33,6 +33,7 @@ export class StationControls {
 
     this.userMusicVolume = 1.0;
     this.isFading = false;
+    this.shuffleEnabled = true;
 
     this.pendingTransition = null;
     this.pendingTransitionForTrackId = null;
@@ -117,6 +118,11 @@ export class StationControls {
       ${!spotify.isConnected && !session.isRunning ? `<p class="muted" style="font-size:0.8rem">Connect Spotify to start a session.</p>` : ""}
       <div id="music-picker-mount"></div>
       <div class="station-actions">
+        ${!session.isRunning ? `
+        <label class="shuffle-toggle">
+          <input type="checkbox" id="chk-shuffle" ${this.shuffleEnabled ? "checked" : ""} />
+          <span>🔀 Shuffle</span>
+        </label>` : ""}
         ${
           this.isStopping
             ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Signing off…</button>`
@@ -146,6 +152,9 @@ export class StationControls {
     this.element.querySelector("#btn-start")?.addEventListener("click", () => void this._startSession());
     this.element.querySelector("#btn-stop")?.addEventListener("click", () => void this._stopSession());
     this.element.querySelector("#btn-debug-skip")?.addEventListener("click", () => void this._debugSkipToBanter());
+    this.element.querySelector("#chk-shuffle")?.addEventListener("change", (e) => {
+      this.shuffleEnabled = e.target.checked;
+    });
 
     // Mount the music picker when off-air
     const pickerMount = this.element.querySelector("#music-picker-mount");
@@ -319,6 +328,10 @@ export class StationControls {
         await this.services.spotifyPlayer.transferPlayback();
         addDjActivityEntry({ type: "system", text: "Music started — DJ taking the mic!", debug: true });
       }
+      // Apply shuffle setting after playback starts
+      await this.services.spotifyPlayer.setShuffle(this.shuffleEnabled).catch((err) => {
+        console.warn("[StationControls] Failed to set shuffle:", err);
+      });
     } catch (err) {
       console.error("[StationControls] Playback start failed:", err);
       addDjActivityEntry({ type: "error", text: "Could not start Spotify playback. Try a different selection." });

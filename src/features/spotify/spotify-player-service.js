@@ -132,6 +132,24 @@ class SpotifyPlayerServiceImpl {
     await this.player.resume();
   }
 
+  async setShuffle(enabled) {
+    if (!this.authService) throw new Error("Auth service not available");
+    const token = await this.authService.getAccessToken();
+    if (!token) throw new Error("No access token available");
+
+    const params = new URLSearchParams({ state: String(enabled) });
+    if (this.deviceId) params.set("device_id", this.deviceId);
+    const res = await fetch(`https://api.spotify.com/v1/me/player/shuffle?${params.toString()}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const text = await res.text();
+      throw new Error(`Set shuffle failed: ${res.status} ${text}`);
+    }
+  }
+
   async transferPlayback() {
     if (!this.deviceId) throw new Error("No device ID — player not ready");
     if (!this.authService) throw new Error("Auth service not available");
