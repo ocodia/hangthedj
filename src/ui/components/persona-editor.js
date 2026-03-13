@@ -71,7 +71,7 @@ export class PersonaEditor {
         </div>
         <div class="field">
           <label for="pe-system-prompt">System Prompt</label>
-          <textarea id="pe-system-prompt" rows="6" maxlength="1000"
+          <textarea id="pe-system-prompt" rows="6"
             placeholder="Describe the DJ's personality, tone, delivery style…"
             style="width:100%;resize:vertical;font-size:0.85rem">${escapeHtml(p.systemPrompt)}</textarea>
           <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">This is the character description sent to the AI. Include tone, delivery style, and word count guidance.</p>

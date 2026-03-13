@@ -25,6 +25,7 @@ function createInitialStore() {
       progressMs: 0,
       durationMs: 0,
       nextTrack: null,
+      isPlaying: false,
     },
     session: {
       activeSession: null,

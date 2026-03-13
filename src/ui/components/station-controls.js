@@ -30,7 +30,7 @@ export class StationControls {
     this.banterEvaluatedForTrackId = null;
     this.isStopping = false;
 
-    this.userMusicVolume = 0.8;
+    this.userMusicVolume = 1.0;
     this.isFading = false;
 
     this.pendingTransition = null;
@@ -103,9 +103,9 @@ export class StationControls {
       <div class="field">
         <label for="persona-select">DJ Persona</label>
         <div style="display:flex;gap:0.5rem;align-items:center">
-          <select id="persona-select" ${session.isRunning ? "disabled" : ""} style="flex:1">${personaOptions}</select>
-          <button class="secondary btn-sm" id="btn-edit-persona" ${session.isRunning ? "disabled" : ""}>Edit</button>
-          <button class="secondary btn-sm" id="btn-add-persona" ${session.isRunning ? "disabled" : ""}>+ New</button>
+          <select id="persona-select" style="flex:1">${personaOptions}</select>
+          <button class="secondary btn-sm" id="btn-edit-persona">Edit</button>
+          <button class="secondary btn-sm" id="btn-add-persona">+ New</button>
         </div>
       </div>
       <div id="persona-editor-mount"></div>
@@ -114,18 +114,18 @@ export class StationControls {
       <div class="station-actions">
         ${
           this.isStopping
-            ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Stopping…</button>`
+            ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Signing off…</button>`
             : session.isRunning
-              ? `<button class="danger" id="btn-stop">Stop Session</button>
+              ? `<button class="danger" id="btn-stop">Sign Off</button>
                ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" style="margin-left:0.5rem;background:#555;color:#ff0;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px dashed #ff0;border-radius:4px;cursor:pointer" title="Skip to ~35s before end of track">⏩ Skip to banter</button>` : ""}`
-              : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Start Session</button>`
+              : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Tune In</button>`
         }
       </div>
       <div class="volume-sliders">
         <div class="volume-slider-row">
           <label class="volume-label">🎵 Music</label>
-          <input type="range" id="vol-music" min="0" max="100" value="80" class="volume-slider" />
-          <span class="volume-value" id="vol-music-value">80%</span>
+          <input type="range" id="vol-music" min="0" max="100" value="100" class="volume-slider" />
+          <span class="volume-value" id="vol-music-value">100%</span>
         </div>
         <div class="volume-slider-row">
           <label class="volume-label">🎙️ DJ Voice</label>
@@ -268,14 +268,12 @@ export class StationControls {
       }
     }
 
-    // 2. Play DJ intro before starting music
-    addDjActivityEntry({ type: "system", text: "Session starting… DJ is warming up 🎤", debug: true });
-    await this._playDjIntro();
+    addDjActivityEntry({ type: "system", text: "Tuning in… DJ is warming up 🎤", debug: true });
 
-    // 3. Set volume to 0 so music fades in after transfer
+    // 2. Set volume to 0 so music plays silently during intro
     await this.services.spotifyPlayer.setVolume(0).catch(() => {});
 
-    // 4. Subscribe to track changes (before transfer so the first track event is captured)
+    // 3. Subscribe to track changes (before transfer so the first track event is captured)
     this.unsubscribeTrackChange = this.services.spotifyPlayer.onTrackChange((track) => {
       if (!track || !this.sessionId) return;
       updatePlaybackState({ currentTrack: track });
@@ -298,20 +296,20 @@ export class StationControls {
       this.pendingTransitionForTrackId = null;
     });
 
-    // 5. Transfer playback to start the first track
+    // 4. Transfer playback to start music silently
     try {
       await this.services.spotifyPlayer.transferPlayback();
-      addDjActivityEntry({ type: "system", text: "Music started — DJ is on the air!", debug: true });
+      addDjActivityEntry({ type: "system", text: "Music started — DJ taking the mic!", debug: true });
     } catch (err) {
       console.error("[StationControls] Playback transfer failed:", err);
       addDjActivityEntry({ type: "error", text: "Could not start Spotify playback. Try playing a track in Spotify first." });
     }
 
-    // 6. Fade music in to the user's chosen volume
-    await this._fadeSpotifyVolume(0, this.userMusicVolume, 2_000);
+    // 5. Play DJ intro over the silent music, fading in music near the end
+    await this._playDjIntroWithFade();
     this.services.coordinator.setTargetVolume(this.userMusicVolume);
 
-    // 8. Subscribe to request state changes
+    // 6. Subscribe to request state changes
     this.unsubscribeRequests = appStore.subscribe("requests", (reqState) => {
       if (!this.sessionId) return;
       const newRequests = reqState.requests.filter((r) => r.status === "pending" && !r.spokenAcknowledgement && !r.spotifyUri);
@@ -322,7 +320,7 @@ export class StationControls {
       }
     });
 
-    // 9. Start position monitor (polls every 1s)
+    // 7. Start position monitor (polls every 1s)
     this._startPositionMonitor();
   }
 
@@ -357,7 +355,7 @@ export class StationControls {
     updateSessionState({ isRunning: false });
 
     if (this.sessionId) {
-      addDjActivityEntry({ type: "system", text: "Session ended. Thanks for listening!" });
+      addDjActivityEntry({ type: "system", text: "Signed off. Thanks for listening!" });
       saveSession({
         ...appStore.get("session").activeSession,
         endedAt: new Date().toISOString(),
@@ -366,6 +364,7 @@ export class StationControls {
 
     this.sessionId = null;
     this.isStopping = false;
+    this._render();
   }
 
   // ── DJ Sign-off ─────────────────────────────────────────────────────────────
@@ -487,6 +486,76 @@ export class StationControls {
       console.error("[StationControls] DJ intro failed:", msg);
       updateAiState({ isGenerating: false, isRendering: false, lastError: msg });
       addDjActivityEntry({ type: "error", text: `DJ intro failed: ${msg}` });
+    }
+  }
+
+  /**
+   * Play the DJ intro and fade music in 2.5s before the banter clip finishes.
+   */
+  async _playDjIntroWithFade() {
+    const { banterEngine, voiceEngine } = this.services;
+    if (!banterEngine || !voiceEngine) {
+      addDjActivityEntry({ type: "system", text: "DJ banter disabled (no OpenAI key).", debug: true });
+      await this._fadeSpotifyVolume(0, this.userMusicVolume, 2_000);
+      return;
+    }
+
+    const personaState = appStore.get("persona");
+    if (!personaState.activePersona) {
+      await this._fadeSpotifyVolume(0, this.userMusicVolume, 2_000);
+      return;
+    }
+
+    try {
+      updateAiState({ isGenerating: true, lastError: null });
+
+      const banterResult = await banterEngine.generate({
+        persona: personaState.activePersona,
+        segmentType: "stationIdent",
+        currentTrack: null,
+        recentTracks: [],
+        requestSummary: [],
+        recentBanterSummaries: [],
+        constraints: {
+          maxWords: 60,
+          maxSeconds: 25,
+          familySafe: appStore.get("settings").schedulerConfig.familySafe,
+        },
+      });
+
+      this._logPromptsIfDebug(banterResult);
+
+      updateAiState({ isGenerating: false, isRendering: true });
+
+      const voiceResult = await voiceEngine.render({
+        text: banterResult.text,
+        voice: personaState.activePersona.voice,
+        elevenLabsVoiceId: personaState.activePersona.elevenLabsVoiceId,
+        speechRate: personaState.activePersona.speechRate,
+        format: "mp3",
+      });
+
+      updateAiState({ isRendering: false });
+
+      addDjActivityEntry({
+        type: "dj",
+        text: `🎤 ${banterResult.text}`,
+      });
+
+      // Play intro and start fading music in 2.5s before the clip ends
+      await this.services.djPlayer.playWithFadeCallback(
+        voiceResult.objectUrl,
+        2.5,
+        () => { this._fadeSpotifyVolume(0, this.userMusicVolume, 2_500); },
+      );
+      this.services.scheduler.recordInsertion("stationIdent");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[StationControls] DJ intro (with fade) failed:", msg);
+      updateAiState({ isGenerating: false, isRendering: false, lastError: msg });
+      addDjActivityEntry({ type: "error", text: `DJ intro failed: ${msg}` });
+      // Ensure music is audible even if intro failed
+      await this._fadeSpotifyVolume(0, this.userMusicVolume, 2_000).catch(() => {});
     }
   }
 

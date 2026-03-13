@@ -2,10 +2,11 @@
  * NowPlayingBar: shows current track info from Spotify.
  */
 
-import { appStore } from '../../stores/app-store.js';
+import { appStore, updatePlaybackState } from '../../stores/app-store.js';
 
 export class NowPlayingBar {
-  constructor() {
+  constructor(services) {
+    this.services = services;
     this.element = document.createElement('div');
     this.element.className = 'now-playing-bar panel';
     this._render(appStore.get('playback'));
@@ -13,6 +14,15 @@ export class NowPlayingBar {
     appStore.subscribe('playback', (state) => {
       this._render(state);
     });
+    appStore.subscribe('session', () => {
+      this._render(appStore.get('playback'));
+    });
+
+    if (services?.spotifyPlayer) {
+      services.spotifyPlayer.onStateChange((state) => {
+        updatePlaybackState({ isPlaying: state.isPlaying });
+      });
+    }
   }
 
   _render(playback) {
@@ -48,6 +58,9 @@ export class NowPlayingBar {
             <span class="track-time muted">${formatTime(progressSec)} / ${formatTime(durationSec)}  ·  ${remainingSec}s left</span>
           </div>
         </div>
+        <button class="playback-toggle" id="btn-play-pause" title="${playback.isPlaying ? 'Pause' : 'Play'}" ${!appStore.get('session').isRunning ? 'disabled' : ''}>
+          ${playback.isPlaying ? '⏸' : '▶'}
+        </button>
         <div class="now-playing-meta">
           <div class="now-playing-label">♫ Now playing</div>
           <div class="debug-info muted">
@@ -57,6 +70,15 @@ export class NowPlayingBar {
         </div>
       </div>
     `;
+
+    this.element.querySelector('#btn-play-pause')?.addEventListener('click', () => {
+      if (!this.services?.spotifyPlayer) return;
+      if (playback.isPlaying) {
+        this.services.spotifyPlayer.pause().catch(console.error);
+      } else {
+        this.services.spotifyPlayer.resume().catch(console.error);
+      }
+    });
   }
 }
 

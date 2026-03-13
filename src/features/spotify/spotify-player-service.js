@@ -38,7 +38,7 @@ class SpotifyPlayerServiceImpl {
             const token = await authService.getAccessToken();
             if (token) cb(token);
           },
-          volume: 0.8,
+          volume: 1.0,
         });
 
         this.player.addListener('ready', (data) => {

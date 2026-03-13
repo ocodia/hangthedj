@@ -39,7 +39,7 @@ export class MainPanel {
     const content = document.createElement('main');
     content.className = 'main-content';
 
-    const nowPlaying = new NowPlayingBar();
+    const nowPlaying = new NowPlayingBar(this.services);
     content.appendChild(nowPlaying.element);
 
     // AI key warning if not set
