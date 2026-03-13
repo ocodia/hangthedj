@@ -757,7 +757,7 @@ export class StationControls {
         requestSummary: [...this.processedCallInSummaries],
         recentBanterSummaries: [],
         constraints: {
-          maxWords: 50,
+          maxWords: 60,
           maxSeconds: 20,
           familySafe: appStore.get("settings").schedulerConfig.familySafe,
         },

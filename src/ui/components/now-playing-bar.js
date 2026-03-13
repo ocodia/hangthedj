@@ -60,9 +60,7 @@ export class NowPlayingBar {
         </div>
         <div class="now-playing-meta">
           <div class="now-playing-label">♫ Now playing</div>
-          <div class="debug-info muted">
-            <span class="debug-coordinator" title="Coordinator state">${coordinatorState}</span>
-          </div>
+          
           ${nextTrack ? `<div class="next-track-info muted" title="Next in queue">⏭ ${escapeHtml(nextTrack.title)} — ${escapeHtml(nextTrack.artistName)}</div>` : ""}
         </div>
       </div>

@@ -310,7 +310,7 @@
 }
 
 .volume-sliders {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 0.6rem;
   margin: 0.75rem 0;
