@@ -10,6 +10,13 @@ import {
   getOpenAIKey,
   setOpenAIKey,
   clearOpenAIKey,
+  hasElevenLabsKey,
+  getElevenLabsKey,
+  setElevenLabsKey,
+  clearElevenLabsKey,
+  getElevenLabsVoiceId,
+  setElevenLabsVoiceId,
+  clearElevenLabsVoiceId,
   setSpotifyClientId,
   clearSpotifyClientId,
   clearSpotifyTokens,
@@ -78,12 +85,22 @@ export class AppShell {
     let banterEngine = null;
     let voiceEngine = null;
     const hasKey = hasOpenAIKey();
-    updateAiState({ hasOpenAiKey: hasKey });
+    const hasElKey = hasElevenLabsKey();
+    const elVoiceId = getElevenLabsVoiceId();
+    updateAiState({
+      hasOpenAiKey: hasKey,
+      hasElevenLabsKey: hasElKey,
+      elevenLabsVoiceId: elVoiceId,
+    });
 
     if (hasKey) {
       const key = getOpenAIKey();
       banterEngine = createBanterEngine(key, personaService);
-      voiceEngine = createVoiceEngine(key);
+      voiceEngine = createVoiceEngine(
+        key,
+        hasElKey ? getElevenLabsKey() : null,
+        elVoiceId,
+      );
     }
 
     this.services = {
@@ -133,7 +150,9 @@ export class AppShell {
         updateAiState({ hasOpenAiKey: true, lastError: null });
         if (services) {
           services.banterEngine = createBanterEngine(key, personaService);
-          services.voiceEngine = createVoiceEngine(key);
+          const elKey = hasElevenLabsKey() ? getElevenLabsKey() : null;
+          const elVoice = getElevenLabsVoiceId();
+          services.voiceEngine = createVoiceEngine(key, elKey, elVoice);
         }
       },
       onOpenAIKeyClear: () => {
@@ -144,6 +163,36 @@ export class AppShell {
           services.voiceEngine = null;
         }
       },
+      onElevenLabsKeySet: (key) => {
+        setElevenLabsKey(key);
+        updateAiState({ hasElevenLabsKey: true });
+        if (services?.voiceEngine) {
+          services.voiceEngine.setElevenLabsConfig(key, getElevenLabsVoiceId());
+        }
+      },
+      onElevenLabsKeyClear: () => {
+        clearElevenLabsKey();
+        clearElevenLabsVoiceId();
+        updateAiState({ hasElevenLabsKey: false, elevenLabsVoiceId: null });
+        if (services?.voiceEngine) {
+          services.voiceEngine.setElevenLabsConfig(null, null);
+        }
+      },
+      onElevenLabsVoiceSelect: (voiceId) => {
+        setElevenLabsVoiceId(voiceId);
+        updateAiState({ elevenLabsVoiceId: voiceId });
+        if (services?.voiceEngine) {
+          services.voiceEngine.setElevenLabsConfig(getElevenLabsKey(), voiceId);
+        }
+      },
+      onElevenLabsVoiceClear: () => {
+        clearElevenLabsVoiceId();
+        updateAiState({ elevenLabsVoiceId: null });
+        if (services?.voiceEngine) {
+          services.voiceEngine.setElevenLabsConfig(getElevenLabsKey(), null);
+        }
+      },
+      getElevenLabsKey: () => getElevenLabsKey(),
       onLogin: () => spotifyAuth.login(),
       onLogout: () => {
         spotifyAuth.logout();

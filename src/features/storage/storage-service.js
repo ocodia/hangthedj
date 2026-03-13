@@ -22,6 +22,8 @@ const LS_SPOTIFY_REFRESH_TOKEN = `${LS_PREFIX}spotify_refresh_token`;
 const LS_SPOTIFY_TOKEN_EXPIRY = `${LS_PREFIX}spotify_token_expiry`;
 const LS_SETTINGS = `${LS_PREFIX}settings`;
 const LS_SPOTIFY_CLIENT_ID = `${LS_PREFIX}spotify_client_id`;
+const LS_ELEVENLABS_KEY = `${LS_PREFIX}elevenlabs_key`;
+const LS_ELEVENLABS_VOICE_ID = `${LS_PREFIX}elevenlabs_voice_id`;
 
 // ── Default settings (exported so app-store can import it) ───────────────────
 
@@ -57,6 +59,39 @@ export function clearOpenAIKey() {
 export function hasOpenAIKey() {
   const key = getOpenAIKey();
   return key !== null && key.trim().length > 0;
+}
+
+// ── ElevenLabs key (localStorage) ─────────────────────────────────────────────
+
+export function setElevenLabsKey(key) {
+  localStorage.setItem(LS_ELEVENLABS_KEY, key);
+}
+
+export function getElevenLabsKey() {
+  return localStorage.getItem(LS_ELEVENLABS_KEY);
+}
+
+export function clearElevenLabsKey() {
+  localStorage.removeItem(LS_ELEVENLABS_KEY);
+}
+
+export function hasElevenLabsKey() {
+  const key = getElevenLabsKey();
+  return key !== null && key.trim().length > 0;
+}
+
+// ── ElevenLabs voice ID (localStorage) ────────────────────────────────────────
+
+export function setElevenLabsVoiceId(id) {
+  localStorage.setItem(LS_ELEVENLABS_VOICE_ID, id);
+}
+
+export function getElevenLabsVoiceId() {
+  return localStorage.getItem(LS_ELEVENLABS_VOICE_ID);
+}
+
+export function clearElevenLabsVoiceId() {
+  localStorage.removeItem(LS_ELEVENLABS_VOICE_ID);
 }
 
 // ── Spotify Client ID (localStorage) ─────────────────────────────────────────
