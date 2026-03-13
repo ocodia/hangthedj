@@ -12,11 +12,13 @@
  */
 
 import type { AppServices } from "@/app/app-shell";
-import { appStore, updateSessionState, updateAiState, updatePlaybackState, addDjActivityEntry, clearDjActivity } from "@/stores/app-store";
+import { appStore, updateSessionState, updateAiState, updatePlaybackState, updatePersonaState, addDjActivityEntry, clearDjActivity } from "@/stores/app-store";
+import { saveSettings, loadSettings } from "@/features/storage/storage-service";
 import { saveSession } from "@/features/storage/storage-service";
 import { v4 as uuidv4 } from "uuid";
 import type { StationMood } from "@/types/session";
 import type { SegmentType } from "@/types/banter";
+import type { BanterResult } from "@/types/banter";
 import type { ListenerRequest } from "@/types/request";
 
 const MOODS: { value: StationMood; label: string }[] = [
@@ -48,6 +50,8 @@ export class StationControls {
   private isPreparingBanter = false;
   private banterEvaluatedForTrackId: string | null = null;
 
+  private isStopping = false;
+
   // Pre-generated banter: generated at ~30s remaining, played at ~5s remaining
   private pendingTransition: { objectUrl: string; segmentType: string; banterText: string; trackInfo: string } | null = null;
   private pendingTransitionForTrackId: string | null = null;
@@ -66,6 +70,8 @@ export class StationControls {
     appStore.subscribe("session", () => this.render());
     appStore.subscribe("ai", () => this.render());
     appStore.subscribe("spotify", () => this.render());
+    appStore.subscribe("settings", () => this.render());
+    appStore.subscribe("persona", () => this.render());
   }
 
   private render(): void {
@@ -77,12 +83,26 @@ export class StationControls {
 
     const currentMoodPrompt = session.isRunning ? this.sessionMoodPrompt : (MOOD_PROMPTS[this.sessionMood] ?? MOOD_PROMPTS["freestyle"]);
 
+    const persona = appStore.get("persona");
+    const personaOptions = persona.personas
+      .map(
+        (p) =>
+          `<option value="${p.id}" ${p.id === persona.activePersona?.id ? "selected" : ""}>
+            ${escapeHtml(p.name)}${p.isPreset ? " ★" : ""}
+          </option>`
+      )
+      .join("");
+
     this.element.innerHTML = `
       <div class="station-header">
         <h2>Station</h2>
         <span class="station-status ${session.isRunning ? "status-on" : "status-off"}">
           ${session.isRunning ? "● On Air" : "○ Off Air"}
         </span>
+      </div>
+      <div class="field">
+        <label for="persona-select">DJ Persona</label>
+        <select id="persona-select" ${session.isRunning ? "disabled" : ""}>${personaOptions}</select>
       </div>
       <div class="field">
         <label for="mood-select">Station Mood</label>
@@ -99,10 +119,12 @@ export class StationControls {
       ${!spotify.isConnected && !session.isRunning ? `<p class="muted" style="font-size:0.8rem">Connect Spotify to start a session.</p>` : ""}
       <div class="station-actions">
         ${
-          session.isRunning
-            ? `<button class="danger" id="btn-stop">Stop Session</button>
-             <button id="btn-debug-skip" style="margin-left:0.5rem;background:#555;color:#ff0;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px dashed #ff0;border-radius:4px;cursor:pointer" title="Skip to ~12s before end of track">⏩ Skip to banter</button>`
-            : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Start Session</button>`
+          this.isStopping
+            ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Stopping…</button>`
+            : session.isRunning
+              ? `<button class="danger" id="btn-stop">Stop Session</button>
+               ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" style="margin-left:0.5rem;background:#555;color:#ff0;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px dashed #ff0;border-radius:4px;cursor:pointer" title="Skip to ~35s before end of track">⏩ Skip to banter</button>` : ""}`
+              : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Start Session</button>`
         }
       </div>
       <div class="dj-status muted" id="dj-status">
@@ -111,8 +133,19 @@ export class StationControls {
     `;
 
     this.element.querySelector("#btn-start")?.addEventListener("click", () => void this.startSession());
-    this.element.querySelector("#btn-stop")?.addEventListener("click", () => this.stopSession());
+    this.element.querySelector("#btn-stop")?.addEventListener("click", () => void this.stopSession());
     this.element.querySelector("#btn-debug-skip")?.addEventListener("click", () => void this.debugSkipToBanter());
+
+    // Persona dropdown
+    this.element.querySelector<HTMLSelectElement>("#persona-select")?.addEventListener("change", async (e) => {
+      const id = (e.target as HTMLSelectElement).value;
+      const p = await this.services.personaService.getById(id);
+      if (p) {
+        updatePersonaState({ activePersona: p });
+        const current = loadSettings();
+        saveSettings({ ...current, activePersonaId: id });
+      }
+    });
 
     // Mood dropdown auto-populates the mood prompt textarea
     this.element.querySelector("#mood-select")?.addEventListener("change", (e) => {
@@ -136,7 +169,7 @@ export class StationControls {
     // Seek to 35 seconds before end — gives 5s buffer before the 30s pre-generation trigger
     const seekTo = Math.max(0, pos.durationMs - 35_000);
     console.log(`[DebugSkip] Seeking to ${Math.round(seekTo / 1000)}s / ${Math.round(pos.durationMs / 1000)}s (35s before end)`);
-    addDjActivityEntry({ type: "system", text: `⏩ Debug skip: jumping to ${Math.round(seekTo / 1000)}s (35s before end)` });
+    addDjActivityEntry({ type: "system", text: `⏩ Debug skip: jumping to ${Math.round(seekTo / 1000)}s (35s before end)`, debug: true });
     await this.services.spotifyPlayer.seek(seekTo);
     // Reset banter flags so the position monitor will evaluate again
     this.banterEvaluatedForTrackId = null;
@@ -194,13 +227,13 @@ export class StationControls {
     }
 
     // 2. Play DJ intro (banter → TTS → audio) BEFORE starting music
-    addDjActivityEntry({ type: "system", text: "Session starting\u2026 DJ is warming up 🎤" });
+    addDjActivityEntry({ type: "system", text: "Session starting… DJ is warming up 🎤", debug: true });
     await this.playDjIntro(mood, moodPrompt);
 
     // 3. Transfer playback to start the first track
     try {
       await this.services.spotifyPlayer.transferPlayback();
-      addDjActivityEntry({ type: "system", text: "Music started — DJ is on the air!" });
+      addDjActivityEntry({ type: "system", text: "Music started — DJ is on the air!", debug: true });
     } catch (err) {
       console.error("[StationControls] Playback transfer failed:", err);
       addDjActivityEntry({ type: "error", text: "Could not start Spotify playback. Try playing a track in Spotify first." });
@@ -249,13 +282,16 @@ export class StationControls {
     this.startPositionMonitor();
   }
 
-  private stopSession(): void {
-    // Stop position monitor
+  private async stopSession(): Promise<void> {
+    if (this.isStopping) return;
+    this.isStopping = true;
+    this.render();
+
+    // Stop position monitor and subscriptions immediately so no new banter is triggered
     if (this.positionInterval !== null) {
       clearInterval(this.positionInterval);
       this.positionInterval = null;
     }
-
     this.unsubscribeTrackChange?.();
     this.unsubscribeTrackChange = null;
     this.unsubscribeRequests?.();
@@ -268,6 +304,9 @@ export class StationControls {
     this.pendingTransitionForTrackId = null;
     this.pendingCallIns = [];
     this.processedCallInSummaries = [];
+
+    // Generate and play goodbye banter, then fade out
+    await this.playDjSignOff();
 
     // Stop Spotify playback
     this.services.spotifyPlayer.pause().catch((err) => {
@@ -285,6 +324,81 @@ export class StationControls {
     }
 
     this.sessionId = null;
+    this.isStopping = false;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // DJ Sign-off — goodbye banter before the station goes off air
+  // ────────────────────────────────────────────────────────────────────────────
+
+  private async playDjSignOff(): Promise<void> {
+    const { banterEngine, voiceEngine } = this.services;
+    if (!banterEngine || !voiceEngine) {
+      addDjActivityEntry({ type: "system", text: "DJ banter disabled (no OpenAI key) — skipping sign-off.", debug: true });
+      // No banter available — just fade out
+      await this.fadeSpotifyVolume(await this.services.spotifyPlayer.getVolume().catch(() => 0.8), 0, 3_000);
+      return;
+    }
+
+    const personaState = appStore.get("persona");
+    if (!personaState.activePersona) {
+      await this.fadeSpotifyVolume(await this.services.spotifyPlayer.getVolume().catch(() => 0.8), 0, 3_000);
+      return;
+    }
+
+    let savedVolume = 0.8;
+    try {
+      savedVolume = await this.services.spotifyPlayer.getVolume().catch(() => 0.8);
+
+      updateAiState({ isGenerating: true, lastError: null });
+      addDjActivityEntry({ type: "system", text: "🧠 Generating sign-off banter…", debug: true });
+
+      const banterResult = await banterEngine.generate({
+        persona: personaState.activePersona,
+        segmentType: "signOff",
+        stationMood: this.sessionMoodPrompt,
+        currentTrack: appStore.get("playback").currentTrack,
+        recentTracks: appStore.get("playback").recentTracks,
+        requestSummary: [],
+        recentBanterSummaries: [],
+        constraints: {
+          maxWords: 60,
+          maxSeconds: 25,
+          familySafe: appStore.get("settings").schedulerConfig.familySafe,
+          factualityMode: personaState.activePersona.factuality,
+        },
+      });
+
+      this.logPromptsIfDebug(banterResult);
+
+      updateAiState({ isGenerating: false, isRendering: true });
+      addDjActivityEntry({ type: "system", text: "🎙️ Rendering sign-off voice…", debug: true });
+
+      const voiceResult = await voiceEngine.render({
+        text: banterResult.text,
+        voice: personaState.activePersona.voice,
+        speechRate: personaState.activePersona.speechRate,
+        format: "mp3",
+      });
+
+      updateAiState({ isRendering: false });
+
+      addDjActivityEntry({ type: "dj", text: `🎤 ${banterResult.text}` });
+
+      // Dip the music volume, play the DJ sign-off clip
+      await this.fadeSpotifyVolume(savedVolume, 0.15, 2_000);
+      await this.services.djPlayer.play(voiceResult.objectUrl);
+
+      // Fade the music to silence
+      await this.fadeSpotifyVolume(0.15, 0, 2_000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[StationControls] DJ sign-off failed:", msg);
+      updateAiState({ isGenerating: false, isRendering: false, lastError: msg });
+      addDjActivityEntry({ type: "error", text: `DJ sign-off failed: ${msg}` });
+      // Best-effort fade out on failure
+      await this.fadeSpotifyVolume(savedVolume, 0, 2_000).catch(() => {});
+    }
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -294,7 +408,7 @@ export class StationControls {
   private async playDjIntro(_mood: StationMood, moodPrompt: string): Promise<void> {
     const { banterEngine, voiceEngine } = this.services;
     if (!banterEngine || !voiceEngine) {
-      addDjActivityEntry({ type: "system", text: "DJ banter disabled (no OpenAI key)." });
+      addDjActivityEntry({ type: "system", text: "DJ banter disabled (no OpenAI key).", debug: true });
       return;
     }
 
@@ -319,6 +433,8 @@ export class StationControls {
           factualityMode: personaState.activePersona.factuality,
         },
       });
+
+      this.logPromptsIfDebug(banterResult);
 
       updateAiState({ isGenerating: false, isRendering: true });
 
@@ -392,7 +508,7 @@ export class StationControls {
       currentTrackId !== this.banterEvaluatedForTrackId
     ) {
       console.log(`[PositionMonitor] ⚡ Phase 1: ${Math.round(remaining / 1000)}s remaining — pre-generating banter`);
-      addDjActivityEntry({ type: "system", text: `⏱️ ${Math.round(remaining / 1000)}s left — preparing DJ banter…` });
+      addDjActivityEntry({ type: "system", text: `⏱️ ${Math.round(remaining / 1000)}s left — preparing DJ banter…`, debug: true });
       this.banterEvaluatedForTrackId = currentTrackId;
       this.isPreparingBanter = true;
       try {
@@ -440,7 +556,7 @@ export class StationControls {
     const { banterEngine, voiceEngine } = this.services;
     if (!banterEngine || !voiceEngine) {
       console.warn("[Banter] No banterEngine or voiceEngine — is OpenAI key set?");
-      addDjActivityEntry({ type: "error", text: "DJ banter disabled — no OpenAI key configured." });
+      addDjActivityEntry({ type: "error", text: "DJ banter disabled — no OpenAI key configured.", debug: true });
       return;
     }
     if (!appStore.get("ai").hasOpenAiKey) {
@@ -472,7 +588,7 @@ export class StationControls {
     console.log("[Banter] Scheduler decision:", decision);
     if (!decision.shouldInsert || !decision.segmentType) {
       console.log("[Banter] Scheduler says skip:", decision.reason);
-      addDjActivityEntry({ type: "system", text: `DJ decided to skip: ${decision.reason}` });
+      addDjActivityEntry({ type: "system", text: `DJ decided to skip: ${decision.reason}`, debug: true });
       return;
     }
 
@@ -480,7 +596,7 @@ export class StationControls {
       updateAiState({ isGenerating: true, lastError: null });
       const statusEl = this.element.querySelector("#dj-status");
       if (statusEl) statusEl.textContent = "DJ is thinking…";
-      addDjActivityEntry({ type: "system", text: "🧠 Generating banter script…" });
+      addDjActivityEntry({ type: "system", text: "🧠 Generating banter script…", debug: true });
 
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
@@ -502,10 +618,12 @@ export class StationControls {
       // Drain call-in summaries now that they've been included in the banter
       this.processedCallInSummaries = [];
 
+      this.logPromptsIfDebug(banterResult);
+
       console.log("[Banter] Script generated:", banterResult.text);
       updateAiState({ isGenerating: false, isRendering: true });
       if (statusEl) statusEl.textContent = "DJ is recording…";
-      addDjActivityEntry({ type: "system", text: "🎙️ Rendering voice…" });
+      addDjActivityEntry({ type: "system", text: "🎙️ Rendering voice…", debug: true });
 
       const voiceResult = await voiceEngine.render({
         text: banterResult.text,
@@ -518,6 +636,8 @@ export class StationControls {
       updateAiState({ isRendering: false });
 
       const trackInfo = currentTrack ? ` [after "${currentTrack.title}" by ${currentTrack.artistName}]` : "";
+      const wordCount = banterResult.text.split(/\s+/).length;
+      addDjActivityEntry({ type: "system", text: `✅ Banter ready (${wordCount} words) — waiting for track to end…`, debug: true });
 
       // Cache the result — Phase 2 will play it when the track is about to end
       this.pendingTransition = {
@@ -529,7 +649,6 @@ export class StationControls {
       this.pendingTransitionForTrackId = currentTrackId;
 
       if (statusEl) statusEl.textContent = `DJ ready: "${banterResult.text.slice(0, 60)}…"`;
-      addDjActivityEntry({ type: "system", text: "✅ Banter ready — waiting for track to end…" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[Banter] Failed:", msg);
@@ -560,7 +679,7 @@ export class StationControls {
         type: "call-in",
         text: `📞 ${callerLabel} called in requesting: "${query}"${request.playNow ? " ⚡ RIGHT NOW" : ""}`,
       });
-      addDjActivityEntry({ type: "system", text: `🔍 Searching Spotify for "${query}"…` });
+      addDjActivityEntry({ type: "system", text: `🔍 Searching Spotify for "${query}"…`, debug: true });
 
       const foundTrack = await this.services.spotifyPlayer.searchTrack(query);
 
@@ -587,15 +706,12 @@ export class StationControls {
           await this.playCallInBanterNow("requestAcknowledgement", [summary], true);
         } else {
           // ── QUEUED mode: generate banter text for the feed (no audio), defer to next transition ──
-          const banterText = await this.generateCallInBanterText("requestAcknowledgement", [
-            `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's been queued up.`,
-          ]);
+          const summary = `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's coming up next — hype the request without referencing the current track.`;
+          const banterText = await this.generateCallInBanterText("requestAcknowledgement", [summary], false);
           if (banterText) {
             addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
           }
-          this.processedCallInSummaries.push(
-            `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's been queued up.`,
-          );
+          this.processedCallInSummaries.push(summary);
         }
       } else {
         // Track not found
@@ -615,15 +731,12 @@ export class StationControls {
           await this.playCallInBanterNow("requestRefusal", [summary], false);
         } else {
           // Generate text for feed, defer to next transition
-          const banterText = await this.generateCallInBanterText("requestRefusal", [
-            `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`,
-          ]);
+          const summary = `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`;
+          const banterText = await this.generateCallInBanterText("requestRefusal", [summary], false);
           if (banterText) {
             addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
           }
-          this.processedCallInSummaries.push(
-            `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`,
-          );
+          this.processedCallInSummaries.push(summary);
         }
       }
     } catch (err) {
@@ -637,8 +750,10 @@ export class StationControls {
 
   /**
    * Generate banter TEXT only (no TTS/audio). Returns the script text for the activity feed.
+   * When includeCurrentTrack is false, the current track context is omitted so the DJ
+   * focuses on the request itself rather than referencing what's currently playing.
    */
-  private async generateCallInBanterText(segmentType: SegmentType, requestSummary: string[]): Promise<string | null> {
+  private async generateCallInBanterText(segmentType: SegmentType, requestSummary: string[], includeCurrentTrack: boolean): Promise<string | null> {
     const { banterEngine } = this.services;
     if (!banterEngine) return null;
 
@@ -650,8 +765,8 @@ export class StationControls {
         persona: personaState.activePersona,
         segmentType,
         stationMood: this.sessionMoodPrompt,
-        currentTrack: appStore.get("playback").currentTrack,
-        recentTracks: appStore.get("playback").recentTracks,
+        currentTrack: includeCurrentTrack ? appStore.get("playback").currentTrack : null,
+        recentTracks: includeCurrentTrack ? appStore.get("playback").recentTracks : [],
         requestSummary,
         recentBanterSummaries: [],
         constraints: {
@@ -661,6 +776,7 @@ export class StationControls {
           factualityMode: personaState.activePersona.factuality,
         },
       });
+      this.logPromptsIfDebug(banterResult);
       return banterResult.text;
     } catch (err) {
       console.warn("[CallIn] Text-only banter generation failed:", err);
@@ -682,7 +798,7 @@ export class StationControls {
     let savedVolume = 0.8;
     try {
       updateAiState({ isGenerating: true, lastError: null });
-      addDjActivityEntry({ type: "system", text: "🧠 Generating call-in banter…" });
+      addDjActivityEntry({ type: "system", text: "🧠 Generating call-in banter…", debug: true });
 
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
@@ -693,15 +809,17 @@ export class StationControls {
         requestSummary,
         recentBanterSummaries: [],
         constraints: {
-          maxWords: 60,
-          maxSeconds: 25,
+          maxWords: 25,
+          maxSeconds: 10,
           familySafe: appStore.get("settings").schedulerConfig.familySafe,
           factualityMode: personaState.activePersona.factuality,
         },
       });
 
+      this.logPromptsIfDebug(banterResult);
+
       updateAiState({ isGenerating: false, isRendering: true });
-      addDjActivityEntry({ type: "system", text: "🎤 Rendering call-in voice…" });
+      addDjActivityEntry({ type: "system", text: "🎤 Rendering call-in voice…", debug: true });
 
       const voiceResult = await voiceEngine.render({
         text: banterResult.text,
@@ -750,6 +868,10 @@ export class StationControls {
 
   /** Smoothly fade Spotify volume between two levels over the given duration. */
   private fadeSpotifyVolume(from: number, to: number, durationMs: number): Promise<void> {
+    const debugMode = appStore.get("settings").debugMode;
+    if (debugMode) {
+      addDjActivityEntry({ type: "system", text: `🔊 Volume fade: ${Math.round(from * 100)}% → ${Math.round(to * 100)}% over ${(durationMs / 1000).toFixed(1)}s`, debug: true });
+    }
     const steps = 12;
     const intervalMs = durationMs / steps;
     const delta = (to - from) / steps;
@@ -759,12 +881,22 @@ export class StationControls {
         step++;
         const vol = step >= steps ? to : from + delta * step;
         this.services.spotifyPlayer.setVolume(vol).catch(() => {});
+        if (debugMode && step % 4 === 0) {
+          addDjActivityEntry({ type: "system", text: `🔊 Volume: ${Math.round(vol * 100)}%`, debug: true });
+        }
         if (step >= steps) {
           clearInterval(timer);
           resolve();
         }
       }, intervalMs);
     });
+  }
+
+  /** Log system and user prompts to the DJ activity feed when debug mode is enabled. */
+  private logPromptsIfDebug(result: BanterResult): void {
+    if (!appStore.get("settings").debugMode) return;
+    addDjActivityEntry({ type: "system", text: `📋 System prompt: ${result.systemPrompt}`, debug: true });
+    addDjActivityEntry({ type: "system", text: `📋 User prompt: ${result.userPrompt}`, debug: true });
   }
 
   private checkCallInFulfillment(track: { id: string; title: string; artistName: string; uri?: string }): void {

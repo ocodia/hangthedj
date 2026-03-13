@@ -8,7 +8,8 @@ export type SegmentType =
   | "requestDeferment"
   | "vibeSetting"
   | "stationIdent"
-  | "artistIntroduction";
+  | "artistIntroduction"
+  | "signOff";
 
 export interface BanterRequest {
   persona: Persona;
@@ -39,6 +40,10 @@ export interface BanterResult {
   tags: string[];
   /** Simple fingerprint for anti-repetition */
   fingerprint: string;
+  /** System prompt sent to the model (for debug logging) */
+  systemPrompt: string;
+  /** User prompt sent to the model (for debug logging) */
+  userPrompt: string;
 }
 
 export interface BanterEngine {

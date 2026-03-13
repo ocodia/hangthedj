@@ -26,9 +26,9 @@ class RequestLineManagerImpl implements RequestLineManager {
   private lastSubmitTime = 0;
 
   async submit(sessionId: string, submission: RequestSubmission): Promise<ListenerRequest> {
-    // Rate limiting
+    // Rate limiting (skip for "play now" requests)
     const now = Date.now();
-    if (now - this.lastSubmitTime < REQUEST_COOLDOWN_MS) {
+    if (!submission.playNow && now - this.lastSubmitTime < REQUEST_COOLDOWN_MS) {
       throw new Error("Please wait a moment before submitting another request.");
     }
 

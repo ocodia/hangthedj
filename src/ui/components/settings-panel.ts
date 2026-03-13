@@ -1,10 +1,9 @@
 /**
- * SettingsPanel: persona selection, OpenAI key management, and app settings.
+ * SettingsPanel: OpenAI key management and app settings.
  */
 
-import type { AppServices } from "@/app/app-shell";
 import type { AppCallbacks } from "@/ui/render";
-import { appStore, updatePersonaState, updateSettings } from "@/stores/app-store";
+import { appStore, updateSettings } from "@/stores/app-store";
 import { saveSettings, loadSettings } from "@/features/storage/storage-service";
 
 export class SettingsPanel {
@@ -12,28 +11,16 @@ export class SettingsPanel {
   private isExpanded = false;
 
   constructor(
-    private services: AppServices,
     private callbacks: AppCallbacks
   ) {
     this.element = document.createElement("div");
     this.element.className = "settings-panel panel";
     this.render();
     appStore.subscribe("ai", () => this.render());
-    appStore.subscribe("persona", () => this.render());
   }
 
   private render(): void {
     const ai = appStore.get("ai");
-    const persona = appStore.get("persona");
-
-    const personaOptions = persona.personas
-      .map(
-        (p) =>
-          `<option value="${p.id}" ${p.id === persona.activePersona?.id ? "selected" : ""}>
-            ${escapeHtml(p.name)}${p.isPreset ? " ★" : ""}
-          </option>`
-      )
-      .join("");
 
     this.element.innerHTML = `
       <div class="settings-header" id="settings-toggle">
@@ -41,11 +28,6 @@ export class SettingsPanel {
         <span class="settings-toggle-icon">${this.isExpanded ? "▲" : "▼"}</span>
       </div>
       <div class="settings-body" style="display:${this.isExpanded ? "block" : "none"}">
-        <div class="field">
-          <label for="persona-select">DJ Persona</label>
-          <select id="persona-select">${personaOptions}</select>
-        </div>
-        <hr style="border-color:#333;margin:1rem 0" />
         <h4>OpenAI Key</h4>
         <p class="muted" style="font-size:0.8rem;margin-bottom:0.5rem">
           Your key is stored locally in your browser only.
@@ -73,11 +55,22 @@ export class SettingsPanel {
             <option value="often" ${appStore.get("settings").schedulerConfig.djFrequency === "often" ? "selected" : ""}>Often (every track)</option>
           </select>
         </div>
-        <div class="field">
-          <label>
+        <div class="field toggle-field">
+          <label class="toggle-switch">
             <input type="checkbox" id="family-safe" ${appStore.get("settings").schedulerConfig.familySafe ? "checked" : ""} />
-            Family-safe mode
+            <span class="toggle-slider"></span>
           </label>
+          <span class="toggle-label-text">Family-safe mode</span>
+        </div>
+        <div class="field toggle-field">
+          <label class="toggle-switch">
+            <input type="checkbox" id="debug-mode" ${appStore.get("settings").debugMode ? "checked" : ""} />
+            <span class="toggle-slider"></span>
+          </label>
+          <div class="toggle-label-group">
+            <span class="toggle-label-text">Debug mode</span>
+            <span class="muted" style="font-size:0.75rem">Show all activity details in DJ log</span>
+          </div>
         </div>
       </div>
     `;
@@ -85,17 +78,6 @@ export class SettingsPanel {
     this.element.querySelector("#settings-toggle")?.addEventListener("click", () => {
       this.isExpanded = !this.isExpanded;
       this.render();
-    });
-
-    this.element.querySelector<HTMLSelectElement>("#persona-select")?.addEventListener("change", async (e) => {
-      const id = (e.target as HTMLSelectElement).value;
-      const p = await this.services.personaService.getById(id);
-      if (p) {
-        updatePersonaState({ activePersona: p });
-        const current = loadSettings();
-        saveSettings({ ...current, activePersonaId: id });
-        updateSettings({ activePersonaId: id });
-      }
     });
 
     this.element.querySelector("#btn-save-key")?.addEventListener("click", () => {
@@ -129,14 +111,13 @@ export class SettingsPanel {
       saveSettings(updated);
       updateSettings(updated);
     });
-  }
-}
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    this.element.querySelector<HTMLInputElement>("#debug-mode")?.addEventListener("change", (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      const current = loadSettings();
+      const updated = { ...current, debugMode: checked };
+      saveSettings(updated);
+      updateSettings(updated);
+    });
+  }
 }

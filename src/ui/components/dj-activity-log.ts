@@ -2,6 +2,8 @@
  * DjActivityLog: shows recent DJ banter lines and activity.
  *
  * Reads from the centralized djActivity store slice.
+ * In non-debug mode, only shows dj, track, call-in, and error entries.
+ * In debug mode, shows everything including system entries and verbose details.
  */
 
 import { appStore } from "@/stores/app-store";
@@ -15,16 +17,30 @@ export class DjActivityLog {
     this.element.className = "dj-activity-log panel";
     this.render([]);
 
-    appStore.subscribe("djActivity", (activity) => {
-      this.render(activity.entries);
+    appStore.subscribe("djActivity", () => {
+      this.renderCurrent();
+    });
+    appStore.subscribe("settings", () => {
+      this.renderCurrent();
     });
   }
 
+  private renderCurrent(): void {
+    const entries = appStore.get("djActivity").entries;
+    this.render(entries);
+  }
+
   private render(entries: DjActivityEntry[]): void {
+    const debugMode = appStore.get("settings").debugMode;
+
+    const filtered = debugMode
+      ? entries
+      : entries.filter((e) => !e.debug && e.type !== "system");
+
     const entryHtml =
-      entries.length === 0
+      filtered.length === 0
         ? `<p class="muted" style="font-size:0.85rem">DJ activity will appear here once a session starts.</p>`
-        : entries
+        : filtered
             .map(
               (e) => `
           <div class="log-entry log-entry--${e.type}">

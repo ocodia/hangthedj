@@ -69,16 +69,14 @@ export class MainPanel {
       content.appendChild(warning);
     }
 
-    // Station controls
-    const stationControls = new StationControls(this.services);
-    content.appendChild(stationControls.element);
-
-    // Two-column layout: left = activity log, right = request line + settings
+    // Two-column layout: left = station controls + activity log, right = request line + settings
     const columns = document.createElement("div");
     columns.className = "columns";
 
     const leftCol = document.createElement("div");
     leftCol.className = "col-main";
+    const stationControls = new StationControls(this.services);
+    leftCol.appendChild(stationControls.element);
     const activityLog = new DjActivityLog();
     leftCol.appendChild(activityLog.element);
 
@@ -87,7 +85,7 @@ export class MainPanel {
     const requestLine = new RequestLinePanel(this.services);
     rightCol.appendChild(requestLine.element);
 
-    const settingsPanel = new SettingsPanel(this.services, this.callbacks);
+    const settingsPanel = new SettingsPanel(this.callbacks);
     rightCol.appendChild(settingsPanel.element);
 
     columns.appendChild(leftCol);

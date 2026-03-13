@@ -63,6 +63,8 @@ export interface DjActivityEntry {
   time: string;
   text: string;
   type: "dj" | "system" | "error" | "track" | "call-in";
+  /** If true, only shown when debug mode is enabled */
+  debug?: boolean;
 }
 
 export interface DjActivityState {

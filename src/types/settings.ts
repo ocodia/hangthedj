@@ -12,6 +12,8 @@ export interface AppSettings {
   keyWarningDismissed: boolean;
   /** Whether the PWA install prompt has been shown */
   installPromptShown: boolean;
+  /** Debug mode — show all activity details in the DJ Activity log */
+  debugMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -24,4 +26,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   keyWarningDismissed: false,
   installPromptShown: false,
+  debugMode: false,
 };

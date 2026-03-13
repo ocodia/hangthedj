@@ -90,6 +90,7 @@ export interface SpotifyPlayerService {
   getNextTrack(): Track | null;
   fetchCurrentPosition(): Promise<{ progressMs: number; durationMs: number; isPlaying: boolean } | null>;
   searchTrack(query: string): Promise<Track | null>;
+  searchTracks(query: string, limit?: number): Promise<Track[]>;
   addToQueue(trackUri: string): Promise<void>;
 }
 
@@ -404,6 +405,33 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
       artworkUrl: item.album?.images?.[0]?.url,
       uri: item.uri,
     };
+  }
+
+  async searchTracks(query: string, limit = 5): Promise<Track[]> {
+    if (!this.authService) throw new Error("Auth service not available");
+    const token = await this.authService.getAccessToken();
+    if (!token) throw new Error("No access token available");
+
+    const params = new URLSearchParams({ q: query, type: "track", limit: String(limit) });
+    const res = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const items = data?.tracks?.items;
+    if (!Array.isArray(items)) return [];
+
+    return items.map((item: { id: string; name: string; uri: string; duration_ms: number; album?: { name: string; images?: Array<{ url: string }> }; artists?: Array<{ name: string }> }) => ({
+      id: item.id,
+      title: item.name,
+      artistName: item.artists?.map((a: { name: string }) => a.name).join(", ") ?? "Unknown",
+      albumName: item.album?.name,
+      durationMs: item.duration_ms,
+      artworkUrl: item.album?.images?.[0]?.url,
+      uri: item.uri,
+    }));
   }
 
   async addToQueue(trackUri: string): Promise<void> {

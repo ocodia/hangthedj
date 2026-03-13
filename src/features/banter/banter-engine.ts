@@ -91,6 +91,12 @@ function buildUserPrompt(req: BanterRequest): string {
     case "artistIntroduction":
       parts.push("Introduce the current or next artist. Keep it exciting and personal.");
       break;
+    case "signOff":
+      parts.push(
+        "The show is ending. Deliver a warm, memorable sign-off. " +
+          "Thank listeners for tuning in, mention any highlights from the session, and say goodbye in character. Keep it heartfelt and punchy.",
+      );
+      break;
   }
 
   parts.push(`Keep it under ${req.constraints.maxWords} words. Spoken audio only — no stage directions.`);
@@ -149,7 +155,7 @@ class BanterEngineImpl implements IBanterEngine {
     const tags = [req.segmentType, req.stationMood ?? ""].filter(Boolean);
     const fingerprint = makeFingerprint(text);
 
-    return { text, estimatedDurationSeconds, tags, fingerprint };
+    return { text, estimatedDurationSeconds, tags, fingerprint, systemPrompt, userPrompt };
   }
 }
 
