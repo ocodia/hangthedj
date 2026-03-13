@@ -3,19 +3,11 @@
  * All persistent reads/writes in the app go through here.
  */
 
-import {
-  dbGet,
-  dbPut,
-  dbDelete,
-  dbGetAll,
-  dbGetAllByIndex,
-  openDatabase,
-  STORES,
-} from './indexeddb.js';
+import { dbGet, dbPut, dbDelete, dbGetAll, dbGetAllByIndex, openDatabase, STORES } from "./indexeddb.js";
 
 // ── localStorage keys ─────────────────────────────────────────────────────────
 
-const LS_PREFIX = 'hangthedj:';
+const LS_PREFIX = "hangthedj:";
 const LS_OPENAI_KEY = `${LS_PREFIX}openai_key`;
 const LS_SPOTIFY_ACCESS_TOKEN = `${LS_PREFIX}spotify_access_token`;
 const LS_SPOTIFY_REFRESH_TOKEN = `${LS_PREFIX}spotify_refresh_token`;
@@ -29,8 +21,8 @@ const LS_ELEVENLABS_VOICE_ID = `${LS_PREFIX}elevenlabs_voice_id`;
 
 export const DEFAULT_SETTINGS = {
   activePersonaId: null,
-  defaultMood: 'freestyle',
-  schedulerConfig: { djFrequency: 'every', requestBehaviour: 'responsive', familySafe: true },
+  defaultMood: "freestyle",
+  schedulerConfig: { djFrequency: "every", requestBehaviour: "responsive", familySafe: true },
   keyWarningDismissed: false,
   installPromptShown: false,
   debugMode: false,
@@ -183,7 +175,7 @@ export async function getRequest(id) {
 }
 
 export async function getRequestsBySession(sessionId) {
-  return dbGetAllByIndex(STORES.REQUESTS, 'sessionId', sessionId);
+  return dbGetAllByIndex(STORES.REQUESTS, "sessionId", sessionId);
 }
 
 export async function updateRequestStatus(id, status, spokenAcknowledgement, promisedForLater) {
@@ -192,10 +184,8 @@ export async function updateRequestStatus(id, status, spokenAcknowledgement, pro
   const updated = {
     ...req,
     status,
-    spokenAcknowledgement:
-      spokenAcknowledgement !== undefined ? spokenAcknowledgement : req.spokenAcknowledgement,
-    promisedForLater:
-      promisedForLater !== undefined ? promisedForLater : req.promisedForLater,
+    spokenAcknowledgement: spokenAcknowledgement !== undefined ? spokenAcknowledgement : req.spokenAcknowledgement,
+    promisedForLater: promisedForLater !== undefined ? promisedForLater : req.promisedForLater,
   };
   await saveRequest(updated);
 }
@@ -231,7 +221,7 @@ export async function saveBanterRecord(record) {
 }
 
 export async function getBanterBySession(sessionId) {
-  return dbGetAllByIndex(STORES.BANTER_HISTORY, 'sessionId', sessionId);
+  return dbGetAllByIndex(STORES.BANTER_HISTORY, "sessionId", sessionId);
 }
 
 // ── Clip metadata (IndexedDB) ─────────────────────────────────────────────────
@@ -251,7 +241,7 @@ export async function saveTrackHistory(record) {
 }
 
 export async function getTrackHistoryBySession(sessionId) {
-  return dbGetAllByIndex(STORES.TRACK_HISTORY, 'sessionId', sessionId);
+  return dbGetAllByIndex(STORES.TRACK_HISTORY, "sessionId", sessionId);
 }
 
 // ── Clear all local data ──────────────────────────────────────────────────────
@@ -259,5 +249,5 @@ export async function getTrackHistoryBySession(sessionId) {
 export function clearAllLocalData() {
   const keysToRemove = Object.keys(localStorage).filter((k) => k.startsWith(LS_PREFIX));
   keysToRemove.forEach((k) => localStorage.removeItem(k));
-  indexedDB.deleteDatabase('hangthedj');
+  indexedDB.deleteDatabase("hangthedj");
 }

@@ -6,9 +6,12 @@
 async function hashString(str) {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  return hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
 }
 
 const objectUrlCache = new Map();
@@ -30,14 +33,12 @@ class VoiceEngineImpl {
   }
 
   async render(req) {
-    const provider = this._useElevenLabs() ? 'elevenlabs' : 'openai';
+    const provider = this._useElevenLabs() ? "elevenlabs" : "openai";
     const cacheKey = await hashString(`${provider}|${req.text}|${req.voice}|${req.speechRate ?? 1.0}|${req.format}`);
     const cached = objectUrlCache.get(cacheKey);
     if (cached) return cached;
 
-    const blob = this._useElevenLabs()
-      ? await this._renderElevenLabs(req)
-      : await this._renderOpenAI(req);
+    const blob = this._useElevenLabs() ? await this._renderElevenLabs(req) : await this._renderOpenAI(req);
 
     const objectUrl = URL.createObjectURL(blob);
     const result = { blob, objectUrl, cacheKey };
@@ -46,17 +47,17 @@ class VoiceEngineImpl {
   }
 
   async _renderOpenAI(req) {
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'tts-1',
+        model: "tts-1",
         input: req.text,
         voice: req.voice,
-        response_format: req.format === 'mp3' ? 'mp3' : 'opus',
+        response_format: req.format === "mp3" ? "mp3" : "opus",
         speed: req.speechRate ?? 1.0,
       }),
     });
@@ -72,15 +73,15 @@ class VoiceEngineImpl {
   async _renderElevenLabs(req) {
     const voiceId = this.elevenLabsVoiceId;
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'xi-api-key': this.elevenLabsKey,
-        'Content-Type': 'application/json',
-        'Accept': 'audio/mpeg',
+        "xi-api-key": this.elevenLabsKey,
+        "Content-Type": "application/json",
+        Accept: "audio/mpeg",
       },
       body: JSON.stringify({
         text: req.text,
-        model_id: 'eleven_multilingual_v2',
+        model_id: "eleven_multilingual_v2",
       }),
     });
 
@@ -110,10 +111,10 @@ export function createVoiceEngine(apiKey, elevenLabsKey = null, elevenLabsVoiceI
  * Returns an array of { voice_id, name, category, labels, preview_url }.
  */
 export async function searchElevenLabsVoices(apiKey, query) {
-  const response = await fetch('https://api.elevenlabs.io/v1/voices', {
-    method: 'GET',
+  const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+    method: "GET",
     headers: {
-      'xi-api-key': apiKey,
+      "xi-api-key": apiKey,
     },
   });
 
@@ -128,8 +129,7 @@ export async function searchElevenLabsVoices(apiKey, query) {
   if (!query || !query.trim()) return voices;
 
   const lower = query.toLowerCase();
-  return voices.filter((v) =>
-    v.name.toLowerCase().includes(lower) ||
-    (v.labels && Object.values(v.labels).some((l) => l.toLowerCase().includes(lower)))
+  return voices.filter(
+    (v) => v.name.toLowerCase().includes(lower) || (v.labels && Object.values(v.labels).some((l) => l.toLowerCase().includes(lower))),
   );
 }

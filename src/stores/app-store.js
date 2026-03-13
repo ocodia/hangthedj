@@ -3,7 +3,7 @@
  * Simple event-emitter pattern — no external state library required.
  */
 
-import { DEFAULT_SETTINGS } from '../features/storage/storage-service.js';
+import { DEFAULT_SETTINGS } from "../features/storage/storage-service.js";
 
 function createInitialStore() {
   return {
@@ -18,7 +18,7 @@ function createInitialStore() {
       deviceName: null,
     },
     playback: {
-      coordinator: 'idle',
+      coordinator: "idle",
       spotify: null,
       currentTrack: null,
       recentTracks: [],
@@ -97,91 +97,91 @@ export const appStore = new AppStoreImpl();
 // ── Typed convenience accessors ───────────────────────────────────────────────
 
 export function getAuthState() {
-  return appStore.get('auth');
+  return appStore.get("auth");
 }
 
 export function updateAuthState(patch) {
-  appStore.update('auth', patch);
+  appStore.update("auth", patch);
 }
 
 export function getSpotifyState() {
-  return appStore.get('spotify');
+  return appStore.get("spotify");
 }
 
 export function updateSpotifyState(patch) {
-  appStore.update('spotify', patch);
+  appStore.update("spotify", patch);
 }
 
 export function getPlaybackState() {
-  return appStore.get('playback');
+  return appStore.get("playback");
 }
 
 export function updatePlaybackState(patch) {
-  appStore.update('playback', patch);
+  appStore.update("playback", patch);
 }
 
 export function getSessionState() {
-  return appStore.get('session');
+  return appStore.get("session");
 }
 
 export function updateSessionState(patch) {
-  appStore.update('session', patch);
+  appStore.update("session", patch);
 }
 
 export function getSchedulerState() {
-  return appStore.get('scheduler');
+  return appStore.get("scheduler");
 }
 
 export function updateSchedulerState(patch) {
-  appStore.update('scheduler', patch);
+  appStore.update("scheduler", patch);
 }
 
 export function getRequestState() {
-  return appStore.get('requests');
+  return appStore.get("requests");
 }
 
 export function updateRequestState(patch) {
-  appStore.update('requests', patch);
+  appStore.update("requests", patch);
 }
 
 export function getPersonaState() {
-  return appStore.get('persona');
+  return appStore.get("persona");
 }
 
 export function updatePersonaState(patch) {
-  appStore.update('persona', patch);
+  appStore.update("persona", patch);
 }
 
 export function getAiState() {
-  return appStore.get('ai');
+  return appStore.get("ai");
 }
 
 export function updateAiState(patch) {
-  appStore.update('ai', patch);
+  appStore.update("ai", patch);
 }
 
 export function getSettings() {
-  return appStore.get('settings');
+  return appStore.get("settings");
 }
 
 export function updateSettings(patch) {
-  appStore.update('settings', patch);
+  appStore.update("settings", patch);
 }
 
 // ── DJ Activity Log helpers ───────────────────────────────────────────────────
 
 export function getDjActivity() {
-  return appStore.get('djActivity');
+  return appStore.get("djActivity");
 }
 
 export function addDjActivityEntry(entry) {
-  const current = appStore.get('djActivity');
+  const current = appStore.get("djActivity");
   const newEntry = { ...entry, time: new Date().toLocaleTimeString() };
-  appStore.update('djActivity', {
+  appStore.update("djActivity", {
     entries: [newEntry, ...current.entries].slice(0, 50),
   });
 }
 
 export function clearDjActivity() {
-  appStore.update('djActivity', { entries: [] });
+  appStore.update("djActivity", { entries: [] });
 }
