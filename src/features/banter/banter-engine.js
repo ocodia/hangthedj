@@ -68,7 +68,19 @@ function buildUserPrompt(req) {
       parts.push("Set the vibe for this moment with a short atmospheric line. No track introduction needed.");
       break;
     case "stationIdent":
-      parts.push("Deliver a brief station ident — who you are, what the station is. Keep it punchy.");
+      if (req.nextTrack) {
+        parts.push(
+          `Deliver a brief station ident — who you are, what the station is. ` +
+          `Then hype the first track coming up: "${req.nextTrack.title}" by ${req.nextTrack.artistName}. Keep it punchy.`,
+        );
+      } else if (req.currentTrack) {
+        parts.push(
+          `Deliver a brief station ident — who you are, what the station is. ` +
+          `Then hype the first track: "${req.currentTrack.title}" by ${req.currentTrack.artistName}. Keep it punchy.`,
+        );
+      } else {
+        parts.push("Deliver a brief station ident — who you are, what the station is. Keep it punchy.");
+      }
       break;
     case "artistIntroduction":
       parts.push("Introduce the current or next artist. Keep it exciting and personal.");

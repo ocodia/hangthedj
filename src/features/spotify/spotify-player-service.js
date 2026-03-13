@@ -282,24 +282,24 @@ class SpotifyPlayerServiceImpl {
   }
 
   /**
-   * Search Spotify for artists, albums, tracks, and playlists.
+   * Search Spotify for artists, albums, and playlists.
    * Returns categorised results.
    */
-  async searchAll(query, limit = 5) {
+  async searchAll(query, limit = 10) {
     if (!this.authService) throw new Error("Auth service not available");
     const token = await this.authService.getAccessToken();
     if (!token) throw new Error("No access token available");
 
     const params = new URLSearchParams({
       q: query,
-      type: "artist,album,track,playlist",
+      type: "artist,album,playlist",
       limit: String(limit),
     });
     const res = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (!res.ok) return { artists: [], albums: [], tracks: [], playlists: [] };
+    if (!res.ok) return { artists: [], albums: [], playlists: [] };
 
     const data = await res.json();
 
@@ -320,16 +320,6 @@ class SpotifyPlayerServiceImpl {
       uri: a.uri,
     }));
 
-    const tracks = (data.tracks?.items ?? []).map((t) => ({
-      type: "track",
-      id: t.id,
-      name: t.name,
-      artistName: t.artists?.map((ar) => ar.name).join(", ") ?? "Unknown",
-      albumName: t.album?.name,
-      imageUrl: t.album?.images?.[0]?.url ?? null,
-      uri: t.uri,
-    }));
-
     const playlists = (data.playlists?.items ?? []).filter(Boolean).map((p) => ({
       type: "playlist",
       id: p.id,
@@ -339,7 +329,7 @@ class SpotifyPlayerServiceImpl {
       uri: p.uri,
     }));
 
-    return { artists, albums, tracks, playlists };
+    return { artists, albums, playlists };
   }
 
   /**

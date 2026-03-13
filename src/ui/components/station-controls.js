@@ -529,11 +529,28 @@ export class StationControls {
     try {
       updateAiState({ isGenerating: true, lastError: null });
 
+      // Wait briefly for the first track to arrive from the Spotify SDK
+      let firstTrack = appStore.get("playback").currentTrack ?? null;
+      if (!firstTrack) {
+        firstTrack = await new Promise((resolve) => {
+          const timeout = setTimeout(() => resolve(null), 3_000);
+          const unsub = appStore.subscribe("playback", (pb) => {
+            if (pb.currentTrack) {
+              clearTimeout(timeout);
+              unsub();
+              resolve(pb.currentTrack);
+            }
+          });
+        });
+      }
+
+      const playbackState = appStore.get("playback");
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType: "stationIdent",
-        currentTrack: null,
-        recentTracks: [],
+        currentTrack: firstTrack,
+        nextTrack: firstTrack,
+        recentTracks: playbackState.recentTracks ?? [],
         requestSummary: [],
         recentBanterSummaries: [],
         constraints: {

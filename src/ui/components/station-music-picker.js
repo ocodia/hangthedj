@@ -127,8 +127,8 @@ export class StationMusicPicker {
     resultsEl.style.display = "block";
 
     try {
-      const data = await this.spotifyPlayer.searchAll(query, 4);
-      const items = [...data.artists, ...data.albums, ...data.tracks, ...data.playlists];
+      const data = await this.spotifyPlayer.searchAll(query, 10);
+      const items = [...data.artists, ...data.albums, ...data.playlists];
 
       if (items.length === 0) {
         resultsEl.innerHTML = `<div class="music-picker-loading muted">No results found.</div>`;
@@ -159,7 +159,6 @@ export class StationMusicPicker {
     return [
       { label: "Artists", items: data.artists },
       { label: "Albums", items: data.albums },
-      { label: "Tracks", items: data.tracks },
       { label: "Playlists", items: data.playlists },
     ];
   }
