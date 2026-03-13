@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hangthedj-v1';
+const CACHE_NAME = 'hangthedj-v2';
 
 const APP_SHELL = [
   './',
@@ -15,6 +15,7 @@ const APP_SHELL = [
   './src/features/storage/storage-service.js',
   './src/features/banter/banter-engine.js',
   './src/features/personas/persona-service.js',
+  './src/features/personas/default-persona-manifest.js',
   './src/features/playback/playback-coordinator.js',
   './src/features/requests/request-line-manager.js',
   './src/features/scheduler/station-scheduler.js',
@@ -31,6 +32,8 @@ const APP_SHELL = [
   './src/ui/components/request-line-panel.js',
   './src/ui/components/settings-panel.js',
   './src/ui/components/station-controls.js',
+  './docs/personas/mountain-frequency.md',
+  './docs/personas/magpie.md',
 ];
 
 self.addEventListener('install', (event) => {

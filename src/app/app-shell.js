@@ -59,16 +59,20 @@ export class AppShell {
 
     // 5. Restore active persona
     const activePersonaId = settings.activePersonaId;
+    let hasRestoredActivePersona = false;
     if (activePersonaId) {
       const active = await personaService.getById(activePersonaId);
-      if (active) updatePersonaState({ activePersona: active });
+      if (active) {
+        updatePersonaState({ activePersona: active });
+        hasRestoredActivePersona = true;
+      }
     }
     // Fall back to first preset if no active persona
-    if (!getSettings().activePersonaId && personas.length > 0) {
+    if (!hasRestoredActivePersona && personas.length > 0) {
       const first = personas[0];
       updatePersonaState({ activePersona: first });
       updateSettings({ activePersonaId: first.id });
-      saveSettings({ ...settings, activePersonaId: first.id });
+      saveSettings({ ...getSettings(), activePersonaId: first.id });
     }
 
     // 6. Set up AI services if key is present
