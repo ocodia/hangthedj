@@ -118,11 +118,15 @@ export class StationControls {
       ${!spotify.isConnected && !session.isRunning ? `<p class="muted" style="font-size:0.8rem">Connect Spotify to start a session.</p>` : ""}
       <div id="music-picker-mount"></div>
       <div class="station-actions">
-        ${!session.isRunning ? `
+        ${
+          !session.isRunning
+            ? `
         <label class="shuffle-toggle">
           <input type="checkbox" id="chk-shuffle" ${this.shuffleEnabled ? "checked" : ""} />
           <span>🔀 Shuffle</span>
-        </label>` : ""}
+        </label>`
+            : ""
+        }
         ${
           this.isStopping
             ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Signing off…</button>`
