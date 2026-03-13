@@ -281,6 +281,99 @@ class SpotifyPlayerServiceImpl {
     }
   }
 
+  /**
+   * Search Spotify for artists, albums, tracks, and playlists.
+   * Returns categorised results.
+   */
+  async searchAll(query, limit = 5) {
+    if (!this.authService) throw new Error("Auth service not available");
+    const token = await this.authService.getAccessToken();
+    if (!token) throw new Error("No access token available");
+
+    const params = new URLSearchParams({
+      q: query,
+      type: "artist,album,track,playlist",
+      limit: String(limit),
+    });
+    const res = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) return { artists: [], albums: [], tracks: [], playlists: [] };
+
+    const data = await res.json();
+
+    const artists = (data.artists?.items ?? []).map((a) => ({
+      type: "artist",
+      id: a.id,
+      name: a.name,
+      imageUrl: a.images?.[0]?.url ?? null,
+      uri: a.uri,
+    }));
+
+    const albums = (data.albums?.items ?? []).map((a) => ({
+      type: "album",
+      id: a.id,
+      name: a.name,
+      artistName: a.artists?.map((ar) => ar.name).join(", ") ?? "Unknown",
+      imageUrl: a.images?.[0]?.url ?? null,
+      uri: a.uri,
+    }));
+
+    const tracks = (data.tracks?.items ?? []).map((t) => ({
+      type: "track",
+      id: t.id,
+      name: t.name,
+      artistName: t.artists?.map((ar) => ar.name).join(", ") ?? "Unknown",
+      albumName: t.album?.name,
+      imageUrl: t.album?.images?.[0]?.url ?? null,
+      uri: t.uri,
+    }));
+
+    const playlists = (data.playlists?.items ?? []).filter(Boolean).map((p) => ({
+      type: "playlist",
+      id: p.id,
+      name: p.name,
+      ownerName: p.owner?.display_name ?? "Spotify",
+      imageUrl: p.images?.[0]?.url ?? null,
+      uri: p.uri,
+    }));
+
+    return { artists, albums, tracks, playlists };
+  }
+
+  /**
+   * Start playback with a Spotify context URI (artist, album, playlist)
+   * or a single track URI.
+   */
+  async playContext(contextUri) {
+    if (!this.deviceId) throw new Error("No device ID — player not ready");
+    if (!this.authService) throw new Error("Auth service not available");
+    const token = await this.authService.getAccessToken();
+    if (!token) throw new Error("No access token available");
+
+    const body = contextUri.startsWith("spotify:track:")
+      ? { uris: [contextUri] }
+      : { context_uri: contextUri };
+
+    const params = new URLSearchParams({ device_id: this.deviceId });
+    const res = await fetch(`https://api.spotify.com/v1/me/player/play?${params.toString()}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok && res.status !== 204) {
+      const text = await res.text();
+      throw new Error(`Play context failed: ${res.status} ${text}`);
+    }
+
+    console.log("[SpotifyPlayer] Started playback with context:", contextUri);
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   _handleStateChange(sdkState) {

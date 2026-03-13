@@ -18,6 +18,7 @@ import {
 import { saveSettings, loadSettings, saveSession } from "../../features/storage/storage-service.js";
 import { generateUUID } from "../../utils.js";
 import { PersonaEditor } from "./persona-editor.js";
+import { StationMusicPicker } from "./station-music-picker.js";
 
 export class StationControls {
   constructor(services) {
@@ -47,6 +48,9 @@ export class StationControls {
       },
       getElevenLabsKey: () => this.services.callbacks?.getElevenLabsKey?.() ?? null,
     });
+
+    this.musicPicker = new StationMusicPicker(services.spotifyPlayer);
+    this.musicPicker.onSelectionChange(() => this._render());
 
     this.element = document.createElement("div");
     this.element.className = "station-controls panel";
@@ -111,6 +115,7 @@ export class StationControls {
       <div id="persona-editor-mount"></div>
       ${!ai.hasOpenAiKey ? `<p class="muted" style="font-size:0.8rem">Set your OpenAI key in Settings to enable DJ banter.</p>` : ""}
       ${!spotify.isConnected && !session.isRunning ? `<p class="muted" style="font-size:0.8rem">Connect Spotify to start a session.</p>` : ""}
+      <div id="music-picker-mount"></div>
       <div class="station-actions">
         ${
           this.isStopping
@@ -118,7 +123,7 @@ export class StationControls {
             : session.isRunning
               ? `<button class="danger" id="btn-stop">Sign Off</button>
                ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" style="margin-left:0.5rem;background:#555;color:#ff0;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px dashed #ff0;border-radius:4px;cursor:pointer" title="Skip to ~35s before end of track">⏩ Skip to banter</button>` : ""}`
-              : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Tune In</button>`
+              : `<button id="btn-start" ${!spotify.isConnected || !this.musicPicker.getSelection() ? "disabled" : ""}>Tune In</button>`
         }
       </div>
       <div class="volume-sliders">
@@ -141,6 +146,14 @@ export class StationControls {
     this.element.querySelector("#btn-start")?.addEventListener("click", () => void this._startSession());
     this.element.querySelector("#btn-stop")?.addEventListener("click", () => void this._stopSession());
     this.element.querySelector("#btn-debug-skip")?.addEventListener("click", () => void this._debugSkipToBanter());
+
+    // Mount the music picker when off-air
+    const pickerMount = this.element.querySelector("#music-picker-mount");
+    if (pickerMount) {
+      if (!session.isRunning) {
+        pickerMount.appendChild(this.musicPicker.element);
+      }
+    }
 
     this.element.querySelector("#btn-edit-persona")?.addEventListener("click", () => {
       const active = appStore.get("persona").activePersona;
@@ -296,13 +309,19 @@ export class StationControls {
       this.pendingTransitionForTrackId = null;
     });
 
-    // 4. Transfer playback to start music silently
+    // 4. Start playback with the selected music context
+    const selectedMusic = this.musicPicker.getSelection();
     try {
-      await this.services.spotifyPlayer.transferPlayback();
-      addDjActivityEntry({ type: "system", text: "Music started — DJ taking the mic!", debug: true });
+      if (selectedMusic?.uri) {
+        await this.services.spotifyPlayer.playContext(selectedMusic.uri);
+        addDjActivityEntry({ type: "system", text: `Music started: ${selectedMusic.name} — DJ taking the mic!`, debug: true });
+      } else {
+        await this.services.spotifyPlayer.transferPlayback();
+        addDjActivityEntry({ type: "system", text: "Music started — DJ taking the mic!", debug: true });
+      }
     } catch (err) {
-      console.error("[StationControls] Playback transfer failed:", err);
-      addDjActivityEntry({ type: "error", text: "Could not start Spotify playback. Try playing a track in Spotify first." });
+      console.error("[StationControls] Playback start failed:", err);
+      addDjActivityEntry({ type: "error", text: "Could not start Spotify playback. Try a different selection." });
     }
 
     // 5. Play DJ intro over the silent music, fading in music near the end
@@ -364,6 +383,7 @@ export class StationControls {
 
     this.sessionId = null;
     this.isStopping = false;
+    this.musicPicker.clear();
     this._render();
   }
 

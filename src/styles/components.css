@@ -772,3 +772,168 @@
   align-items: center;
   margin-top: 1rem;
 }
+
+/* ─── Station Music Picker ────────────────────────────────────────── */
+
+.music-picker {
+  margin: 0.75rem 0;
+}
+
+.music-picker-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+.music-picker-search {
+  position: relative;
+}
+
+.music-picker-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+  border: 1px solid #333;
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color var(--transition);
+  box-sizing: border-box;
+}
+
+.music-picker-input:focus {
+  border-color: var(--color-accent);
+}
+
+.music-picker-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.music-picker-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--color-bg-panel);
+  border: 1px solid #333;
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.music-picker-group-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0.75rem 0.25rem;
+}
+
+.music-picker-result {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.music-picker-result:hover {
+  background: var(--color-bg-surface);
+}
+
+.music-picker-result-art,
+.music-picker-result-art-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.music-picker-result-art-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #222;
+  font-size: 1rem;
+}
+
+.music-picker-result-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.music-picker-result-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-picker-result-sub {
+  font-size: 0.72rem;
+}
+
+.music-picker-loading {
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Selected item chip */
+.music-picker-selection {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+}
+
+.music-picker-art {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.music-picker-art-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #222;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.music-picker-sel-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.music-picker-sel-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-picker-sel-meta {
+  font-size: 0.75rem;
+}
