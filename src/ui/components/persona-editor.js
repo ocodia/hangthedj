@@ -3,11 +3,11 @@
  * Supports ElevenLabs voice search when an API key is available.
  */
 
-import { appStore, updatePersonaState } from '../../stores/app-store.js';
-import { saveSettings, loadSettings } from '../../features/storage/storage-service.js';
-import { searchElevenLabsVoices } from '../../features/voice/voice-engine.js';
+import { appStore, updatePersonaState } from "../../stores/app-store.js";
+import { saveSettings, loadSettings } from "../../features/storage/storage-service.js";
+import { searchElevenLabsVoices } from "../../features/voice/voice-engine.js";
 
-const OPENAI_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
+const OPENAI_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
 
 export class PersonaEditor {
   constructor(services, callbacks) {
@@ -19,8 +19,8 @@ export class PersonaEditor {
     this._voiceSearching = false;
     this._voiceSearchError = null;
 
-    this.element = document.createElement('div');
-    this.element.className = 'persona-editor';
+    this.element = document.createElement("div");
+    this.element.className = "persona-editor";
   }
 
   open(persona) {
@@ -29,10 +29,10 @@ export class PersonaEditor {
       this._isNew = false;
     } else {
       this._persona = {
-        name: '',
-        systemPrompt: 'Keep responses 30–50 words.',
-        elevenLabsVoiceId: '',
-        voice: 'nova',
+        name: "",
+        systemPrompt: "Keep responses 30–50 words.",
+        elevenLabsVoiceId: "",
+        voice: "nova",
         speechRate: 1.0,
         isPreset: false,
       };
@@ -45,7 +45,7 @@ export class PersonaEditor {
 
   close() {
     this._persona = null;
-    this.element.innerHTML = '';
+    this.element.innerHTML = "";
   }
 
   isOpen() {
@@ -54,19 +54,17 @@ export class PersonaEditor {
 
   _render() {
     if (!this._persona) {
-      this.element.innerHTML = '';
+      this.element.innerHTML = "";
       return;
     }
 
     const p = this._persona;
-    const ai = appStore.get('ai');
-    const voiceOptions = OPENAI_VOICES.map(
-      (v) => `<option value="${v}" ${v === p.voice ? 'selected' : ''}>${v}</option>`,
-    ).join('');
+    const ai = appStore.get("ai");
+    const voiceOptions = OPENAI_VOICES.map((v) => `<option value="${v}" ${v === p.voice ? "selected" : ""}>${v}</option>`).join("");
 
     this.element.innerHTML = `
       <div class="persona-editor-form">
-        <h3>${this._isNew ? 'Add DJ Persona' : 'Edit DJ Persona'}</h3>
+        <h3>${this._isNew ? "Add DJ Persona" : "Edit DJ Persona"}</h3>
         <div class="field">
           <label for="pe-name">Name</label>
           <input type="text" id="pe-name" value="${escapeHtml(p.name)}" placeholder="e.g. DJ Midnight" maxlength="60" autocomplete="off" />
@@ -85,15 +83,19 @@ export class PersonaEditor {
         </div>
         <div class="field">
           <label for="pe-elevenlabs-voice-id">ElevenLabs Voice ID</label>
-          <input type="text" id="pe-elevenlabs-voice-id" value="${escapeHtml(p.elevenLabsVoiceId || '')}" placeholder="e.g. 7ktJCfz71Z44ppWOelh3" autocomplete="off" />
-          ${ai.hasElevenLabsKey ? `
+          <input type="text" id="pe-elevenlabs-voice-id" value="${escapeHtml(p.elevenLabsVoiceId || "")}" placeholder="e.g. 7ktJCfz71Z44ppWOelh3" autocomplete="off" />
+          ${
+            ai.hasElevenLabsKey
+              ? `
           <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
             <input type="text" id="pe-voice-search" placeholder="Search voices…" autocomplete="off" style="flex:1" />
-            <button id="btn-pe-search-voices" class="secondary btn-sm" ${this._voiceSearching ? 'disabled' : ''}>${this._voiceSearching ? 'Searching…' : 'Search'}</button>
+            <button id="btn-pe-search-voices" class="secondary btn-sm" ${this._voiceSearching ? "disabled" : ""}>${this._voiceSearching ? "Searching…" : "Search"}</button>
           </div>
-          ${this._voiceSearchError ? `<p style="color:#e74c3c;font-size:0.75rem;margin-top:0.25rem">${escapeHtml(this._voiceSearchError)}</p>` : ''}
+          ${this._voiceSearchError ? `<p style="color:#e74c3c;font-size:0.75rem;margin-top:0.25rem">${escapeHtml(this._voiceSearchError)}</p>` : ""}
           ${this._renderVoiceResults()}
-          ` : `<p class="muted" style="font-size:0.75rem;margin-top:0.25rem">Add an ElevenLabs API key in Settings to search voices.</p>`}
+          `
+              : `<p class="muted" style="font-size:0.75rem;margin-top:0.25rem">Add an ElevenLabs API key in Settings to search voices.</p>`
+          }
         </div>
         <div class="field">
           <label for="pe-speech-rate">Speech Rate</label>
@@ -101,8 +103,8 @@ export class PersonaEditor {
           <span class="muted" style="font-size:0.75rem" id="pe-speech-rate-value">${p.speechRate.toFixed(2)}</span>
         </div>
         <div class="persona-editor-actions">
-          <button id="btn-pe-save">${this._isNew ? 'Add Persona' : 'Save Changes'}</button>
-          ${!this._isNew && !p.isPreset ? `<button class="danger btn-sm" id="btn-pe-delete">Delete</button>` : ''}
+          <button id="btn-pe-save">${this._isNew ? "Add Persona" : "Save Changes"}</button>
+          ${!this._isNew && !p.isPreset ? `<button class="danger btn-sm" id="btn-pe-delete">Delete</button>` : ""}
           <button class="secondary btn-sm" id="btn-pe-cancel">Cancel</button>
         </div>
       </div>
@@ -112,23 +114,23 @@ export class PersonaEditor {
   }
 
   _renderVoiceResults() {
-    if (this._voiceResults.length === 0) return '';
+    if (this._voiceResults.length === 0) return "";
     const rows = this._voiceResults
       .map((v) => {
-        const labels = v.labels ? Object.values(v.labels).join(', ') : '';
+        const labels = v.labels ? Object.values(v.labels).join(", ") : "";
         const isSelected = this._persona?.elevenLabsVoiceId === v.voice_id;
-        return `<tr class="voice-result-row" style="cursor:pointer;${isSelected ? 'background:var(--color-surface-hover,#333)' : ''}">
+        return `<tr class="voice-result-row" style="cursor:pointer;${isSelected ? "background:var(--color-surface-hover,#333)" : ""}">
           <td style="padding:0.35rem 0.5rem">${escapeHtml(v.name)}</td>
           <td style="padding:0.35rem 0.5rem;font-size:0.75rem;color:#999">${escapeHtml(labels)}</td>
           <td style="padding:0.35rem 0.5rem">
-            ${v.preview_url ? `<button class="secondary btn-sm btn-pe-preview" data-preview="${escapeAttr(v.preview_url)}" style="font-size:0.7rem">▶</button>` : ''}
+            ${v.preview_url ? `<button class="secondary btn-sm btn-pe-preview" data-preview="${escapeAttr(v.preview_url)}" style="font-size:0.7rem">▶</button>` : ""}
           </td>
           <td style="padding:0.35rem 0.5rem">
-            <button class="btn-sm btn-pe-pick-voice" data-voice-id="${escapeAttr(v.voice_id)}">${isSelected ? '✓ Selected' : 'Select'}</button>
+            <button class="btn-sm btn-pe-pick-voice" data-voice-id="${escapeAttr(v.voice_id)}">${isSelected ? "✓ Selected" : "Select"}</button>
           </td>
         </tr>`;
       })
-      .join('');
+      .join("");
 
     return `<div style="max-height:200px;overflow-y:auto;margin-top:0.5rem">
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
@@ -144,33 +146,33 @@ export class PersonaEditor {
   }
 
   _bindEvents() {
-    this.element.querySelector('#pe-speech-rate')?.addEventListener('input', (e) => {
+    this.element.querySelector("#pe-speech-rate")?.addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
-      const label = this.element.querySelector('#pe-speech-rate-value');
+      const label = this.element.querySelector("#pe-speech-rate-value");
       if (label) label.textContent = val.toFixed(2);
     });
 
-    this.element.querySelector('#btn-pe-save')?.addEventListener('click', () => void this._save());
-    this.element.querySelector('#btn-pe-cancel')?.addEventListener('click', () => this.callbacks.onClose());
-    this.element.querySelector('#btn-pe-delete')?.addEventListener('click', () => void this._delete());
+    this.element.querySelector("#btn-pe-save")?.addEventListener("click", () => void this._save());
+    this.element.querySelector("#btn-pe-cancel")?.addEventListener("click", () => this.callbacks.onClose());
+    this.element.querySelector("#btn-pe-delete")?.addEventListener("click", () => void this._delete());
 
-    this.element.querySelector('#btn-pe-search-voices')?.addEventListener('click', () => void this._searchVoices());
-    this.element.querySelector('#pe-voice-search')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') void this._searchVoices();
+    this.element.querySelector("#btn-pe-search-voices")?.addEventListener("click", () => void this._searchVoices());
+    this.element.querySelector("#pe-voice-search")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") void this._searchVoices();
     });
 
-    this.element.querySelectorAll('.btn-pe-pick-voice').forEach((btn) => {
-      btn.addEventListener('click', () => {
+    this.element.querySelectorAll(".btn-pe-pick-voice").forEach((btn) => {
+      btn.addEventListener("click", () => {
         const voiceId = btn.dataset.voiceId;
-        const input = this.element.querySelector('#pe-elevenlabs-voice-id');
+        const input = this.element.querySelector("#pe-elevenlabs-voice-id");
         if (input) input.value = voiceId;
         if (this._persona) this._persona.elevenLabsVoiceId = voiceId;
         this._render();
       });
     });
 
-    this.element.querySelectorAll('.btn-pe-preview').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+    this.element.querySelectorAll(".btn-pe-preview").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const url = btn.dataset.preview;
         const audio = new Audio(url);
@@ -180,11 +182,11 @@ export class PersonaEditor {
   }
 
   async _searchVoices() {
-    const ai = appStore.get('ai');
+    const ai = appStore.get("ai");
     if (!ai.hasElevenLabsKey) return;
 
-    const searchInput = this.element.querySelector('#pe-voice-search');
-    const query = searchInput?.value?.trim() || '';
+    const searchInput = this.element.querySelector("#pe-voice-search");
+    const query = searchInput?.value?.trim() || "";
 
     this._voiceSearching = true;
     this._voiceSearchError = null;
@@ -203,18 +205,18 @@ export class PersonaEditor {
   }
 
   async _save() {
-    const name = this.element.querySelector('#pe-name')?.value?.trim();
-    const systemPrompt = this.element.querySelector('#pe-system-prompt')?.value?.trim();
-    const voice = this.element.querySelector('#pe-voice')?.value || 'nova';
-    const elevenLabsVoiceId = this.element.querySelector('#pe-elevenlabs-voice-id')?.value?.trim() || '';
-    const speechRate = parseFloat(this.element.querySelector('#pe-speech-rate')?.value) || 1.0;
+    const name = this.element.querySelector("#pe-name")?.value?.trim();
+    const systemPrompt = this.element.querySelector("#pe-system-prompt")?.value?.trim();
+    const voice = this.element.querySelector("#pe-voice")?.value || "nova";
+    const elevenLabsVoiceId = this.element.querySelector("#pe-elevenlabs-voice-id")?.value?.trim() || "";
+    const speechRate = parseFloat(this.element.querySelector("#pe-speech-rate")?.value) || 1.0;
 
     if (!name) {
-      alert('Please enter a persona name.');
+      alert("Please enter a persona name.");
       return;
     }
     if (!systemPrompt) {
-      alert('Please enter a system prompt.');
+      alert("Please enter a system prompt.");
       return;
     }
 
@@ -245,7 +247,7 @@ export class PersonaEditor {
       updatePersonaState({ personas });
 
       // If this is the active persona, update it
-      const active = appStore.get('persona').activePersona;
+      const active = appStore.get("persona").activePersona;
       if (active && active.id === saved.id) {
         updatePersonaState({ activePersona: saved });
       }
@@ -259,7 +261,7 @@ export class PersonaEditor {
 
       this.callbacks.onClose();
     } catch (err) {
-      alert('Failed to save persona: ' + err.message);
+      alert("Failed to save persona: " + err.message);
     }
   }
 
@@ -273,7 +275,7 @@ export class PersonaEditor {
       updatePersonaState({ personas });
 
       // If deleted persona was active, switch to first available
-      const active = appStore.get('persona').activePersona;
+      const active = appStore.get("persona").activePersona;
       if (active && active.id === this._persona.id && personas.length > 0) {
         updatePersonaState({ activePersona: personas[0] });
         const current = loadSettings();
@@ -282,17 +284,17 @@ export class PersonaEditor {
 
       this.callbacks.onClose();
     } catch (err) {
-      alert('Failed to delete persona: ' + err.message);
+      alert("Failed to delete persona: " + err.message);
     }
   }
 }
 
 function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function escapeAttr(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
