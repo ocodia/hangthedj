@@ -10,9 +10,7 @@ export class SettingsPanel {
   element: HTMLElement;
   private isExpanded = false;
 
-  constructor(
-    private callbacks: AppCallbacks
-  ) {
+  constructor(private callbacks: AppCallbacks) {
     this.element = document.createElement("div");
     this.element.className = "settings-panel panel";
     this.render();
@@ -33,12 +31,13 @@ export class SettingsPanel {
           Your key is stored locally in your browser only.
           OpenAI usage is billed to your own account.
         </p>
-        ${ai.hasOpenAiKey
-          ? `<div class="key-status">
+        ${
+          ai.hasOpenAiKey
+            ? `<div class="key-status">
               <span style="color:var(--color-accent)">✓ Key set</span>
               <button class="secondary btn-sm" id="btn-clear-key" style="margin-left:0.75rem">Clear key</button>
             </div>`
-          : `<div class="field">
+            : `<div class="field">
               <label for="openai-key">API Key</label>
               <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off" />
               <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">Never shared. Stored in your browser only.</p>

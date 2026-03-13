@@ -24,7 +24,7 @@ export class MainPanel {
 
   constructor(
     private services: AppServices,
-    private callbacks: AppCallbacks
+    private callbacks: AppCallbacks,
   ) {
     this.element = document.createElement("div");
     this.element.className = "main-panel";
@@ -44,9 +44,7 @@ export class MainPanel {
         <button class="secondary btn-sm" id="btn-logout">Sign out</button>
       </div>
     `;
-    header.querySelector("#btn-logout")?.addEventListener("click", () =>
-      this.callbacks.onLogout()
-    );
+    header.querySelector("#btn-logout")?.addEventListener("click", () => this.callbacks.onLogout());
     this.element.appendChild(header);
 
     // Main content area

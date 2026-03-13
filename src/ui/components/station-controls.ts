@@ -12,7 +12,15 @@
  */
 
 import type { AppServices } from "@/app/app-shell";
-import { appStore, updateSessionState, updateAiState, updatePlaybackState, updatePersonaState, addDjActivityEntry, clearDjActivity } from "@/stores/app-store";
+import {
+  appStore,
+  updateSessionState,
+  updateAiState,
+  updatePlaybackState,
+  updatePersonaState,
+  addDjActivityEntry,
+  clearDjActivity,
+} from "@/stores/app-store";
 import { saveSettings, loadSettings } from "@/features/storage/storage-service";
 import { saveSession } from "@/features/storage/storage-service";
 import { v4 as uuidv4 } from "uuid";
@@ -89,7 +97,7 @@ export class StationControls {
         (p) =>
           `<option value="${p.id}" ${p.id === persona.activePersona?.id ? "selected" : ""}>
             ${escapeHtml(p.name)}${p.isPreset ? " ★" : ""}
-          </option>`
+          </option>`,
       )
       .join("");
 
@@ -870,7 +878,11 @@ export class StationControls {
   private fadeSpotifyVolume(from: number, to: number, durationMs: number): Promise<void> {
     const debugMode = appStore.get("settings").debugMode;
     if (debugMode) {
-      addDjActivityEntry({ type: "system", text: `🔊 Volume fade: ${Math.round(from * 100)}% → ${Math.round(to * 100)}% over ${(durationMs / 1000).toFixed(1)}s`, debug: true });
+      addDjActivityEntry({
+        type: "system",
+        text: `🔊 Volume fade: ${Math.round(from * 100)}% → ${Math.round(to * 100)}% over ${(durationMs / 1000).toFixed(1)}s`,
+        debug: true,
+      });
     }
     const steps = 12;
     const intervalMs = durationMs / steps;

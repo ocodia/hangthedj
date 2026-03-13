@@ -450,7 +450,9 @@
   background: #333;
   border-radius: 24px;
   cursor: pointer;
-  transition: background 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .toggle-slider::before {
@@ -462,7 +464,9 @@
   height: 18px;
   background: #888;
   border-radius: 50%;
-  transition: transform 0.25s ease, background 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease;
 }
 
 .toggle-switch input:checked + .toggle-slider {

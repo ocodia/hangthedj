@@ -423,15 +423,24 @@ class SpotifyPlayerServiceImpl implements SpotifyPlayerService {
     const items = data?.tracks?.items;
     if (!Array.isArray(items)) return [];
 
-    return items.map((item: { id: string; name: string; uri: string; duration_ms: number; album?: { name: string; images?: Array<{ url: string }> }; artists?: Array<{ name: string }> }) => ({
-      id: item.id,
-      title: item.name,
-      artistName: item.artists?.map((a: { name: string }) => a.name).join(", ") ?? "Unknown",
-      albumName: item.album?.name,
-      durationMs: item.duration_ms,
-      artworkUrl: item.album?.images?.[0]?.url,
-      uri: item.uri,
-    }));
+    return items.map(
+      (item: {
+        id: string;
+        name: string;
+        uri: string;
+        duration_ms: number;
+        album?: { name: string; images?: Array<{ url: string }> };
+        artists?: Array<{ name: string }>;
+      }) => ({
+        id: item.id,
+        title: item.name,
+        artistName: item.artists?.map((a: { name: string }) => a.name).join(", ") ?? "Unknown",
+        albumName: item.album?.name,
+        durationMs: item.duration_ms,
+        artworkUrl: item.album?.images?.[0]?.url,
+        uri: item.uri,
+      }),
+    );
   }
 
   async addToQueue(trackUri: string): Promise<void> {

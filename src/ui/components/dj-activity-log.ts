@@ -33,9 +33,7 @@ export class DjActivityLog {
   private render(entries: DjActivityEntry[]): void {
     const debugMode = appStore.get("settings").debugMode;
 
-    const filtered = debugMode
-      ? entries
-      : entries.filter((e) => !e.debug && e.type !== "system");
+    const filtered = debugMode ? entries : entries.filter((e) => !e.debug && e.type !== "system");
 
     const entryHtml =
       filtered.length === 0
