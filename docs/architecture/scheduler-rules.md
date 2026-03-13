@@ -5,7 +5,7 @@
 The StationScheduler is the editorial brain of HangTheDJ. It decides:
 - whether the DJ should speak at this moment
 - what type of segment to generate
-- whether a listener request should be acknowledged now or deferred
+- whether a listener request should be acknowledged now
 - how frequently the DJ interrupts the station flow
 
 The scheduler runs on every meaningful playback event (track change, progress update).
@@ -66,11 +66,13 @@ interface SchedulerDecision {
 Priority order:
 
 1. **Station ident** — once per session, on first insertion
-2. **Request acknowledgement** — if a pending request has urgency >= high
-3. **Request refusal / deferment** — if a rejected/deferred request needs speaking
-4. **Artist introduction** — if a newly accepted request artist is now playing
-5. **Transition** — default between-track comment
-6. **Vibe-setting line** — if mood changed or after a long gap
+2. **Request acknowledgement** — if a pending request has not been spoken about and `requestBehaviour` is `responsive`
+3. **Request deferment** — if more than 3 pending requests, the scheduler produces a deferment instead of full acknowledgement
+4. **Transition** — default between-track comment
+
+Note: `artistIntroduction` and `vibeSetting` segment types are supported by the BanterEngine but the scheduler currently defaults to `transition` when no higher-priority segment applies.
+
+The scheduler also respects a brief-persona heuristic: if the persona's `verbosity` is `"brief"` and fewer than 3 tracks have passed since the last insertion, the scheduler will skip.
 
 ---
 
@@ -78,11 +80,13 @@ Priority order:
 
 | Rule                   | Default        | Configurable |
 |------------------------|----------------|--------------|
-| Min tracks between DJ  | 2              | Yes          |
-| Min time between DJ    | 3 minutes      | Yes          |
-| Max insertions per hour| 15             | Yes          |
+| Min tracks between DJ  | 2              | Yes (via djFrequency) |
+| Min time between DJ    | 3 minutes      | Yes (via djFrequency) |
+| Max insertions per hour| 15             | Yes (via djFrequency) |
 | Session ident cooldown | Once per session | No          |
 | Same request repeat    | Never          | No           |
+
+Cooldown checks are bypassed when `djFrequency` is set to `every` (debug mode).
 
 ---
 
@@ -103,16 +107,17 @@ Accept/defer/reject decision is made by the scheduler and passed to the BanterEn
 
 ```ts
 interface SchedulerConfig {
-  djFrequency: "rarely" | "sometimes" | "often";  // maps to cooldown values
+  djFrequency: "every" | "rarely" | "sometimes" | "often";  // maps to cooldown values
   requestBehaviour: "responsive" | "editorial";   // how quickly requests are addressed
   familySafe: boolean;                             // passed to banter generation
 }
 ```
 
 Mapping for `djFrequency`:
-- `rarely` → minTracksBetweenDJ = 4, maxInsertionsPerHour = 6
-- `sometimes` → minTracksBetweenDJ = 2, maxInsertionsPerHour = 15 (default)
-- `often` → minTracksBetweenDJ = 1, maxInsertionsPerHour = 25
+- `every` → minTracksBetweenDJ = 0, minMsBetweenDJ = 0, maxInsertionsPerHour = 999 (debug mode — DJ speaks on every track change)
+- `rarely` → minTracksBetweenDJ = 4, minMsBetweenDJ = 300000 (5 min), maxInsertionsPerHour = 6
+- `sometimes` → minTracksBetweenDJ = 2, minMsBetweenDJ = 180000 (3 min), maxInsertionsPerHour = 15 (default)
+- `often` → minTracksBetweenDJ = 1, minMsBetweenDJ = 90000 (90 sec), maxInsertionsPerHour = 25
 
 ---
 

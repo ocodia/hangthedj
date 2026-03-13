@@ -21,7 +21,7 @@ The architecture is designed around a client-side compliant playback model:
 - Spotify provides music playback in the browser
 - the app monitors playback state and track transitions
 - the app decides when a DJ insertion should happen
-- the app pauses playback or uses a natural transition point
+- the app ducks volume and plays a separate audio clip for the DJ segment
 - the app generates or retrieves a DJ clip using OpenAI APIs
 - the app plays a separate audio clip for the DJ segment
 - Spotify playback resumes afterward
@@ -198,7 +198,7 @@ Design notes:
 
 Responsibilities:
 
-- orchestrate pause → DJ clip → resume
+- orchestrate volume ducking → DJ clip → volume restore
 - own compliant-mode transition flow
 - prevent race conditions when user actions or playback changes occur mid-transition
 - decide when a prepared clip should be used or discarded
@@ -206,22 +206,29 @@ Responsibilities:
 ### State machine
 
 ```text
-Idle
-  -> Monitoring
-  -> PreparingTransition
-  -> WaitingForInsertionPoint
-  -> PausingPlayback
-  -> PlayingDjClip
-  -> ResumingPlayback
-  -> Monitoring
+idle
+  -> monitoring
+  -> fadingOut
+  -> playingDjClip
+  -> resumingPlayback
+  -> monitoring
 ```
+
+The coordinator uses **volume ducking** rather than pause/resume. Music continues playing at 20% volume while the DJ clip plays, then fades back to the user's original volume.
+
+### Crossfade parameters
+
+- Fade-out: 3000ms over 15 steps
+- Ducked volume: 0.2
+- Fade-in: 1500ms over 8 steps
 
 ### Failure handling
 
 - if clip is not ready in time, skip insertion
-- if Spotify pause fails, skip insertion
-- if DJ audio fails, resume music immediately
-- if playback changes unexpectedly, cancel current transition safely
+- if fade-out fails, log warning and continue
+- if DJ audio fails, proceed to restore volume
+- if fade-in fails, snap volume to original
+- if playback changes unexpectedly, restore volume and return to monitoring
 
 ---
 
@@ -288,9 +295,12 @@ interface ListenerRequest {
   moodSuggestion?: string;
   message?: string;
   submittedAt: string;
-  status: "pending" | "accepted" | "deferred" | "rejected" | "fulfilled";
+  status: "pending" | "accepted" | "rejected" | "fulfilled";
   spokenAcknowledgement: boolean;
   promisedForLater: boolean;
+  playNow: boolean;
+  spotifyUri?: string;
+  spotifyTrackTitle?: string;
 }
 ```
 
@@ -315,26 +325,24 @@ Responsibilities:
 interface Persona {
   id: string;
   name: string;
-  summary: string;
-  tone: string;
-  humourLevel: string;
-  energyLevel: string;
-  verbosity: string;
-  factuality: string;
-  accent?: string;
+  systemPrompt: string;
+  elevenLabsVoiceId?: string;
   voice: string;
   speechRate?: number;
-  expressiveness?: string;
-  catchphrases?: string[];
+  isPreset: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
 
 Design rule:
-Store personas as structured data rather than giant raw prompts only.
+Personas use a free-form `systemPrompt` that encodes all personality traits in natural language. This gives users full control and simplifies the data model while preserving expressive power.
 
 ---
 
 ## 6.8 Context builder
+
+Note: In the current implementation, context assembly is handled inline by `StationControls` (which builds the `BanterRequest` object) and `buildUserPrompt()` within the `BanterEngine`. There is no separate `ContextBuilder` module — the functionality is distributed across these two locations.
 
 Responsibilities:
 
@@ -410,10 +418,11 @@ interface BanterResult {
 
 Responsibilities:
 
-- render banter scripts into audio clips using OpenAI APIs
+- render banter scripts into audio clips using OpenAI TTS or ElevenLabs TTS
+- select provider based on configuration (ElevenLabs if key + voice ID present, otherwise OpenAI)
 - apply voice/style selection
 - return playable audio blobs or URLs
-- support local caching
+- support in-memory caching via SHA-256 content hashing
 
 ### Suggested interface
 
@@ -425,8 +434,8 @@ interface VoiceEngine {
 interface VoiceRenderRequest {
   text: string;
   voice: string;
+  elevenLabsVoiceId?: string;
   speechRate?: number;
-  styleHint?: string;
   format: "mp3" | "wav";
 }
 
@@ -441,8 +450,10 @@ interface VoiceRenderResult {
 ### Design notes
 
 - rendered clips should be treated as cacheable session assets
+- cache key is SHA-256 of (provider + text + voice + speechRate + format)
 - clear object URLs when no longer needed
-- persist reusable clips or clip metadata where beneficial
+- ElevenLabs uses `eleven_multilingual_v2` model
+- OpenAI uses `tts-1` model
 
 ---
 
@@ -534,7 +545,7 @@ Design rule:
 Distinguish clearly between:
 
 - user-paused playback
-- DJ-induced playback pause
+- DJ-induced volume ducking
 - playback interruption or error
 
 ---
@@ -577,7 +588,7 @@ Important limitation:
 4. Banter engine generates short script
 5. Voice engine renders script to audio
 6. Playback coordinator reaches insertion point
-7. Spotify playback pauses
+7. Music volume ducks to 20%
 8. DJ audio clip plays
 9. DJ audio completes
 10. Spotify playback resumes
@@ -593,7 +604,7 @@ Important limitation:
 4. A later insertion point is chosen
 5. Banter engine generates a DJ acknowledgement
 6. DJ clip plays
-7. Request status is updated to acknowledged, accepted, deferred, or rejected
+7. Request status is updated to accepted or rejected
 ```
 
 ## 7.4 Failure flow
@@ -648,9 +659,12 @@ interface ListenerRequest {
   moodSuggestion?: string;
   message?: string;
   submittedAt: string;
-  status: "pending" | "accepted" | "deferred" | "rejected" | "fulfilled";
+  status: "pending" | "accepted" | "rejected" | "fulfilled";
   spokenAcknowledgement: boolean;
   promisedForLater: boolean;
+  playNow: boolean;
+  spotifyUri?: string;
+  spotifyTrackTitle?: string;
 }
 ```
 
@@ -660,17 +674,13 @@ interface ListenerRequest {
 interface Persona {
   id: string;
   name: string;
-  summary: string;
-  tone: string;
-  humourLevel: string;
-  energyLevel: string;
-  verbosity: string;
-  factuality: string;
-  accent?: string;
+  systemPrompt: string;
+  elevenLabsVoiceId?: string;
   voice: string;
   speechRate?: number;
-  expressiveness?: string;
-  catchphrases?: string[];
+  isPreset: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
 

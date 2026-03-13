@@ -69,8 +69,11 @@ https://sdk.scdn.co/spotify-player.js
 ```ts
 const player = new Spotify.Player({
   name: "HangTheDJ",
-  getOAuthToken: (cb) => cb(accessToken),
-  volume: 0.8,
+  getOAuthToken: async (cb) => {
+    const token = await authService.getAccessToken();
+    if (token) cb(token);
+  },
+  volume: 1.0,
 });
 ```
 
@@ -111,23 +114,53 @@ Key fields:
 
 ### Known limitations
 
-- The Web Playback SDK does not support queue introspection (you cannot see what track is coming next)
+- The Web Playback SDK does not support queue introspection (you cannot see what track is coming next via the queue API, though `next_tracks` in the track window provides a preview)
 - Playback must be active on this device; if the user switches to another Spotify device, events may stop
-- `player_state_changed` frequency is not guaranteed; poll if needed
+- `player_state_changed` frequency is not guaranteed; the app uses position interpolation between SDK updates
 - iOS Safari has autoplay restrictions that may require user gesture before audio can play
-
-TODO: Add explicit handling for device transfer and iOS autoplay restrictions.
 
 ---
 
 ## Spotify Web API calls used in v1
 
-Minimal Web API usage in v1 (most state comes from the SDK):
+The app uses a broader set of Web API calls than originally planned:
 
-| Call                          | Purpose                             |
-|-------------------------------|-------------------------------------|
-| GET /me                       | Validate token, get user profile    |
-| GET /me/player                | Fallback playback state polling     |
+| Call                                  | Purpose                                |
+|---------------------------------------|----------------------------------------|
+| GET /v1/search (type=track)           | Search for tracks (request line)       |
+| GET /v1/search (type=artist,album,playlist) | Music picker context search      |
+| POST /v1/me/player/queue              | Add requested tracks to queue          |
+| PUT /v1/me/player/play                | Start playback with context URI        |
+| PUT /v1/me/player                     | Transfer playback to HangTheDJ device  |
+| PUT /v1/me/player/shuffle             | Enable/disable shuffle mode            |
+
+### SpotifyPlayerService methods
+
+| Method               | Description                                             |
+|----------------------|---------------------------------------------------------|
+| `initialize(auth)`   | Load SDK, create player, register listeners             |
+| `connect()`          | Connect player if not already connected                 |
+| `disconnect()`       | Disconnect player, clear state                          |
+| `getCurrentTrack()`  | Return current normalized track                         |
+| `getPlaybackState()` | Return current playback state                           |
+| `getNextTrack()`     | Return next track from SDK track window                 |
+| `getDeviceId()`      | Return virtual device ID                                |
+| `pause()`            | Pause playback                                          |
+| `resume()`           | Resume playback                                         |
+| `seek(positionMs)`   | Seek to position                                        |
+| `nextTrack()`        | Skip to next track                                      |
+| `setVolume(vol)`     | Set volume (0–1)                                         |
+| `getVolume()`        | Get current volume                                      |
+| `setShuffle(bool)`   | Enable/disable shuffle via Web API                      |
+| `transferPlayback()` | Transfer playback to HangTheDJ device via Web API       |
+| `playContext(uri)`   | Start playback from a context URI (artist/album/playlist/track) |
+| `searchTrack(query)` | Search for a single track, return normalized result     |
+| `searchTracks(q, n)` | Search for multiple tracks                              |
+| `searchAll(query)`   | Search artists, albums, playlists (for music picker)    |
+| `addToQueue(uri)`    | Add a track URI to the Spotify queue                    |
+| `fetchCurrentPosition()` | Get interpolated playback position                  |
+| `onStateChange(fn)`  | Subscribe to playback state changes                     |
+| `onTrackChange(fn)`  | Subscribe to track change events                        |
 
 ---
 

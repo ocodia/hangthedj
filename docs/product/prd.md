@@ -187,7 +187,7 @@ Accepted requests influence the future station flow without turning the app into
 - Listener request line / call-in flow
 - Request queue and request status tracking
 - DJ acknowledgement of listener requests
-- Station scheduling logic for accepted, deferred, or rejected requests
+- Station scheduling logic for accepted or rejected requests
 - Client-side session memory for recent requests, banter, and tracks
 - IndexedDB or local storage persistence
 - User-supplied OpenAI API key
@@ -354,9 +354,8 @@ The system shall:
 The system shall:
 
 - identify valid moments for DJ insertion
-- pause playback or use a natural transition gap
-- play a separate DJ audio clip
-- resume playback afterward
+- duck music volume and play a separate DJ audio clip
+- restore music volume afterward
 - cancel or skip transitions safely if timing fails or the session changes unexpectedly
 
 ### 11.3 Script generation
@@ -374,7 +373,8 @@ The system shall:
 
 The system shall:
 
-- render DJ scripts into spoken audio using OpenAI APIs
+- render DJ scripts into spoken audio using OpenAI TTS or ElevenLabs TTS
+- select provider based on configuration (ElevenLabs if key and voice ID available, otherwise OpenAI)
 - support multiple voice/style configurations where available
 - support pace and expressiveness controls where possible
 - cache generated clips where practical
@@ -385,7 +385,8 @@ The system shall:
 
 - accept listener requests
 - store request details and status client-side
-- classify requests as accepted, deferred, rejected, or fulfilled
+- classify requests as accepted, rejected, or fulfilled
+- support "play right now" requests with immediate Spotify search and queue
 - let the DJ acknowledge requests later in banter
 - allow accepted requests to influence future programming
 - maintain consistency between what the DJ says and what the station later does
@@ -416,7 +417,8 @@ The system shall:
 The system shall:
 
 - allow the user to enter, update, and clear an OpenAI API key
-- store the key locally in the browser
+- optionally allow the user to enter an ElevenLabs API key for premium voices
+- store keys locally in the browser
 - clearly explain that the key is user-supplied and locally stored
 - persist personas and settings locally
 
@@ -469,19 +471,15 @@ The system shall:
 
 ### 13.1 Default mode
 
-The MVP operates in interstitial mode:
+The MVP operates in interstitial mode with volume ducking:
 
-- DJ clips are separate from Spotify music playback
-- music is paused or a natural gap is used
-- the product does not depend on simultaneous speech over songs
+- DJ clips play while music volume is temporarily reduced to 20%
+- Music fades out over 3 seconds, DJ clip plays, music fades back in over 1.5 seconds
+- The product does not pause Spotify playback during DJ segments
 
-### 13.2 Future experimental mode
+### 13.2 Note on implementation
 
-A future ducked-overlay mode may be explored, but:
-
-- it is optional
-- it is not required for the product to make sense
-- it is isolated from the compliant core design
+The original architecture anticipated a full pause/resume model, but the implemented approach uses crossfade/ducking for smoother transitions. This provides a more natural radio feel while maintaining compliance.
 
 ---
 
@@ -531,7 +529,7 @@ The MVP is successful if:
 - Spotify authentication
 - Spotify playback integration
 - local OpenAI key entry and storage
-- basic pause → DJ clip → resume flow
+- basic volume-duck → DJ clip → restore flow
 - basic persona presets
 - OpenAI banter generation
 - OpenAI speech generation

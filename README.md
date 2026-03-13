@@ -18,6 +18,7 @@ HangTheDJ v1 is a **zero-dependency, zero-build** web app. No Node.js, no npm, n
 - A Spotify Premium account
 - A Spotify developer app (free to create)
 - An OpenAI API key (with access to Chat Completions and Text-to-Speech)
+- Optionally, an ElevenLabs API key (for premium voice quality)
 
 ### 1. Get the code
 
@@ -60,6 +61,8 @@ In the Settings panel, enter your OpenAI API key (`sk-...`). This enables:
 - **AI banter**: The DJ generates contextual commentary between tracks
 - **Text-to-speech**: The DJ's words are spoken aloud
 
+Optionally, add an **ElevenLabs API key** for higher-quality or custom voices.
+
 ---
 
 ## Deploy to GitHub Pages
@@ -84,16 +87,18 @@ The app works offline (UI only — Spotify and OpenAI require internet).
 - **No backend** — all data stays in your browser (localStorage + IndexedDB)
 - **Spotify PKCE auth** — no client secret required
 - **OpenAI API** — direct `fetch()` calls, key stored only in your browser
+- **ElevenLabs TTS** — optional premium voice provider, key stored locally
 - **Service worker** — app shell cached for offline PWA support
 
 ### How it works
 
 1. You authenticate with Spotify using PKCE OAuth (no server involved)
 2. The Spotify Web Playback SDK streams music directly in your browser
-3. When a track is ~30s from ending, the app asks OpenAI to generate a short DJ comment
-4. OpenAI TTS converts the comment to speech (~3–8s audio clip)
-5. The app crossfades: music volume dips, DJ clip plays, music restores
-6. You can call in requests — the app searches Spotify and queues tracks
+3. You pick a DJ persona and optionally select a music context (artist, album, or playlist)
+4. When a track is ~30s from ending, the app asks OpenAI to generate a short DJ comment
+5. OpenAI TTS (or ElevenLabs) converts the comment to speech (~3–8s audio clip)
+6. The app crossfades: music volume ducks to 20%, DJ clip plays, music volume restores
+7. You can call in requests — the app searches Spotify and queues tracks
 
 ### Key files
 
@@ -126,6 +131,7 @@ hangthedj/
 - **Nothing is stored on any server** — all data is local to your browser
 - **Spotify tokens** are stored in localStorage and expire automatically
 - **OpenAI API key** is stored in localStorage, never transmitted to any server other than `api.openai.com`
+- **ElevenLabs API key** (if used) is stored in localStorage, never transmitted to any server other than `api.elevenlabs.io`
 - **Spotify Client ID** is stored in localStorage — it is a public identifier (not a secret)
 
 ---

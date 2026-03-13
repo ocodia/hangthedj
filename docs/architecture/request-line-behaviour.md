@@ -12,18 +12,21 @@ The request line allows users to "call in" to the station to suggest artists, tr
 interface ListenerRequest {
   id: string;
   sessionId: string;
-  callerName?: string;       // Optional handle or name
-  artistName: string;        // Required: who they want to hear
-  trackName?: string;        // Optional: specific track
-  moodSuggestion?: string;   // Optional: e.g. "something chill"
-  message?: string;          // Optional: short message to the DJ
+  callerName?: string;       // Optional handle or name (max 50 chars)
+  artistName: string;        // Required: who they want to hear (max 100 chars)
+  trackName?: string;        // Optional: specific track (max 100 chars)
+  moodSuggestion?: string;   // Optional: e.g. "something chill" (max 100 chars)
+  message?: string;          // Optional: short message to the DJ (max 200 chars)
   submittedAt: string;       // ISO 8601
   status: RequestStatus;
   spokenAcknowledgement: boolean; // Has the DJ spoken about this?
   promisedForLater: boolean;      // Did the DJ imply it's coming?
+  playNow: boolean;               // Did the user request immediate playback?
+  spotifyUri?: string;            // Spotify URI if track was found via search
+  spotifyTrackTitle?: string;     // Resolved track title from Spotify
 }
 
-type RequestStatus = "pending" | "accepted" | "deferred" | "rejected" | "fulfilled";
+type RequestStatus = "pending" | "accepted" | "rejected" | "fulfilled";
 ```
 
 ---
@@ -33,10 +36,16 @@ type RequestStatus = "pending" | "accepted" | "deferred" | "rejected" | "fulfill
 ```
 submitted → pending
 pending → accepted   (DJ will play this artist / acknowledge the request)
-pending → deferred   (DJ acknowledges but doesn't commit)
 pending → rejected   (DJ declines in character)
 accepted → fulfilled (Artist/track has been introduced or played)
 ```
+
+### "Play right now" requests
+
+When a user submits a request with the "Play right now" toggle enabled:
+1. The app immediately searches Spotify for the requested track
+2. If found: the track is added to the Spotify queue, status becomes `accepted`, and immediate banter is generated
+3. If not found: the request is rejected
 
 ---
 
@@ -49,7 +58,7 @@ accepted → fulfilled (Artist/track has been introduced or played)
    - UI shows: "Your request is in the queue — the DJ will get to it"
    - No spinner or blocking wait
 4. On DJ acknowledgement:
-   - Status updates to accepted/deferred/rejected
+   - Status updates to accepted/rejected
    - UI can reflect this with a subtle badge or status indicator
 5. On fulfilment:
    - Status updates to fulfilled
@@ -66,8 +75,10 @@ Banter example:
 
 ### Deferred request
 
-Banter example:
+Banter example (used when there are many pending requests):
 > "Someone's asking for [Artist]. Not quite the vibe right now, but let's see where the night goes."
+
+Note: The scheduler classifies this as `requestDeferment` segment type, but the request status remains `pending` — there is no separate `deferred` status.
 
 ### Rejected request
 
@@ -108,6 +119,22 @@ If the DJ says a request "is coming up", the system must:
 - If for any reason it cannot be fulfilled (e.g. session ends), the promise is silently dropped
 
 Do not have the DJ make promises the system cannot keep. Prefer "we'll see" over "definitely up next".
+
+---
+
+## Request UI
+
+The request line panel provides:
+
+- Caller name input (saved to localStorage for persistence)
+- Spotify track search with debounce (350ms), grouped results
+- Selected track display with artwork
+- Optional message field
+- "Play right now" toggle
+- Submit button
+- Recent request history (5 most recent, sorted by time)
+
+All user inputs are sanitized: angle brackets (`<>`) are stripped to prevent HTML injection.
 
 ---
 

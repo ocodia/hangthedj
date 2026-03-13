@@ -23,12 +23,10 @@ Both are called directly from the browser using the user's own API key.
 ## BanterEngine
 
 ### Model
-`gpt-4o-mini` is recommended for v1:
+`gpt-5.3-chat-latest` is the model used in v1:
 - fast enough for near-real-time use
 - cost-effective for short DJ scripts
 - good instruction-following for persona prompts
-
-Alternative: `gpt-4o` for higher quality if latency allows.
 
 ### Prompt structure
 
@@ -102,12 +100,12 @@ POST https://api.openai.com/v1/audio/speech
 
 ### Caching strategy
 
-Cache key = hash of (text + voice + speechRate)
+Cache key = SHA-256 hash of (provider + text + voice + speechRate + format)
 
-- Check local Cache Storage before calling the API
-- If cache hit: return cached blob without API call
-- If cache miss: call API, store result, return blob
-- Cache is pruned when session ends or storage approaches quota
+- Check in-memory object URL cache before calling the API
+- If cache hit: return cached result without API call
+- If cache miss: call API, create object URL, store result, return
+- Cache is cleared when session ends (all object URLs are revoked)
 
 ### Error handling
 
@@ -116,13 +114,58 @@ Cache key = hash of (text + voice + speechRate)
 
 ---
 
+---
+
+## ElevenLabs Integration (Optional)
+
+HangTheDJ supports **ElevenLabs** as an alternative TTS provider for higher-quality or custom voices.
+
+### Provider selection
+
+The VoiceEngine automatically selects the provider per render request:
+- If an ElevenLabs API key is set **and** the active persona has an `elevenLabsVoiceId`: use ElevenLabs
+- Otherwise: use OpenAI TTS
+
+### ElevenLabs TTS request
+
+```
+POST https://api.elevenlabs.io/v1/text-to-speech/{voiceId}
+Headers:
+  xi-api-key: <user key>
+  Content-Type: application/json
+  Accept: audio/mpeg
+Body:
+{
+  "text": "<script text>",
+  "model_id": "eleven_multilingual_v2"
+}
+```
+
+### Voice search
+
+The app provides a voice search UI that queries the ElevenLabs voice library:
+
+```
+GET https://api.elevenlabs.io/v1/voices
+Headers:
+  xi-api-key: <user key>
+```
+
+Results are filtered client-side by name or labels. Users can preview and select voices from the persona editor.
+
+### Key storage
+
+The ElevenLabs API key is stored in localStorage under `hangthedj:elevenlabs_key`, managed by `StorageService`.
+
+---
+
 ## Cost considerations
 
 - Chat Completions: billed per token; short DJ scripts are cheap (< 500 tokens each)
-- TTS: billed per character; ~30 words ≈ 200 characters ≈ small cost per clip
+- OpenAI TTS: billed per character; ~30 words ≈ 200 characters ≈ small cost per clip
+- ElevenLabs TTS: billed per character under the user's ElevenLabs plan
 - Caching rendered clips reduces repeated TTS calls significantly
 - The app should clearly communicate usage to the user
-- TODO: Add a session cost estimator or usage counter in settings
 
 ---
 
@@ -131,3 +174,4 @@ Cache key = hash of (text + voice + speechRate)
 - OpenAI API permits browser-originated CORS requests with a user-supplied key
 - `tts-1` response latency is typically 1–3 seconds for short clips — acceptable for pre-generation
 - OpenAI voice API does not yet support custom accent or style injection beyond the voice ID selection; style is handled via prompt phrasing in the banter script itself
+- ElevenLabs API permits browser-originated CORS requests with a user-supplied key

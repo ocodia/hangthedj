@@ -9,12 +9,13 @@ This document describes the major user flows and state transitions in HangTheDJ.
 ## 1. Startup flow
 
 ```
-App loads (index.html → main.ts)
+App loads (index.html → main.js)
   │
   ├─ Register service worker
   ├─ Initialize StorageService (IndexedDB open + schema verify)
   ├─ Load app settings from localStorage
-  ├─ Restore last active persona
+  ├─ Seed default personas if not present
+  ├─ Restore last active persona (or default to first preset)
   │
   ├─ Check Spotify auth state
   │   ├─ Token present and valid → restore session → go to PlayerReady
@@ -22,8 +23,8 @@ App loads (index.html → main.ts)
   │   └─ No token → show Auth screen
   │
   └─ Check OpenAI key presence
-      ├─ Key present → ready for generation
-      └─ No key → prompt for key (non-blocking, DJ inactive until provided)
+      ├─ Key present → initialize BanterEngine + VoiceEngine
+      └─ No key → show warning banner (non-blocking, DJ inactive until provided)
 ```
 
 ---
@@ -33,27 +34,36 @@ App loads (index.html → main.ts)
 ```
 PlayerReady
   │
-  ├─ User selects mood and persona
-  ├─ User starts session
+  ├─ User selects persona
+  ├─ User optionally selects music context (artist/album/playlist via Music Picker)
+  ├─ User clicks "Tune In"
   │
-  ├─ SpotifyPlayerService.connect() → device ready
+  ├─ Session created and saved to IndexedDB
+  ├─ SpotifyPlayerService initialized (SDK loaded if needed)
   ├─ PlaybackCoordinator enters Monitoring state
+  ├─ Spotify volume set to 0 (for intro fade-in)
+  ├─ Music playback starts from selected context
+  ├─ DJ intro generated and played with fade-in
   │
-  └─ Loop:
-      ├─ Track changes detected
-      ├─ StationScheduler evaluates insertion opportunity
-      │   ├─ No insertion → continue monitoring
-      │   └─ Insertion approved →
-      │       ├─ ContextBuilder assembles context
-      │       ├─ BanterEngine generates script
-      │       ├─ VoiceEngine renders audio
-      │       ├─ PlaybackCoordinator waits for insertion point
-      │       ├─ SpotifyPlayerService.pause()
-      │       ├─ DJAudioPlayer.play(clip)
-      │       ├─ DJAudioPlayer completes
-      │       ├─ SpotifyPlayerService.resume()
-      │       └─ SessionMemory updated
-      └─ Repeat
+  └─ Position Monitor Loop (~1s intervals):
+      ├─ Fetch current playback position
+      │
+      ├─ Phase 1 (< 30s remaining):
+      │   ├─ StationScheduler evaluates insertion opportunity
+      │   ├─ If approved: BanterEngine generates script
+      │   ├─ VoiceEngine renders audio (cached for Phase 2)
+      │   └─ Store pre-generated clip for upcoming transition
+      │
+      ├─ Phase 2 (< 10s remaining):
+      │   └─ PlaybackCoordinator.executeTransition()
+      │       ├─ Fade music volume to 20% (3s, 15 steps)
+      │       ├─ Play DJ audio clip over ducked music
+      │       └─ Fade music volume back to original (1.5s, 8 steps)
+      │
+      └─ Phase 3: Process pending call-in queue
+          ├─ Search Spotify for requested tracks
+          ├─ Accept or reject requests
+          └─ Queue accepted tracks on Spotify
 ```
 
 ---
@@ -69,61 +79,67 @@ User fills in request form
   │
   └─ On next scheduler evaluation:
       ├─ Scheduler sees pending request
-      ├─ Classifies as: accept / defer / reject
+      ├─ Classifies segment as: requestAcknowledgement or requestDeferment
       │
-      ├─ accepted → BanterEngine generates acknowledgement script
-      │             DJ speaks the acknowledgement
-      │             Status → "accepted"
-      │             promisedForLater = true if applicable
-      │
-      ├─ deferred → DJ may or may not mention it now
-      │             Status → "deferred"
+      ├─ acknowledged → BanterEngine generates acknowledgement script
+      │                 DJ speaks the acknowledgement
+      │                 Status → "accepted"
       │
       └─ rejected → DJ declines in character
                     Status → "rejected"
+
+Request with "Play right now" flag:
+  ├─ Spotify search for track immediately
+  ├─ If found: add to Spotify queue, generate immediate banter
+  ├─ If not found: reject request
 ```
 
 ---
 
-## 4. Transition state machine
+## 4. Transition state machine (PlaybackCoordinator)
 
 ```
 States:
-  Idle
-  Monitoring
-  PreparingTransition
-  WaitingForInsertionPoint
-  PausingPlayback
-  PlayingDjClip
-  ResumingPlayback
+  idle
+  monitoring
+  fadingOut
+  playingDjClip
+  resumingPlayback
 
 Transitions:
-  Idle → Monitoring                    (session started)
-  Monitoring → PreparingTransition     (scheduler approves insertion)
-  PreparingTransition → WaitingForInsertionPoint  (clip generated and ready)
-  PreparingTransition → Monitoring     (generation failed → skip, resume monitoring)
-  WaitingForInsertionPoint → PausingPlayback  (insertion point reached)
-  WaitingForInsertionPoint → Monitoring (opportunity expired → skip)
-  PausingPlayback → PlayingDjClip      (Spotify paused successfully)
-  PausingPlayback → Monitoring         (pause failed → skip)
-  PlayingDjClip → ResumingPlayback     (DJ clip completed)
-  PlayingDjClip → ResumingPlayback     (DJ clip errored → skip to resume)
-  ResumingPlayback → Monitoring        (Spotify resumed)
-  Monitoring → Idle                    (session ended)
+  idle → monitoring                    (session started)
+  monitoring → fadingOut               (transition triggered with DJ clip ready)
+  fadingOut → playingDjClip            (music ducked to 20% volume)
+  playingDjClip → resumingPlayback     (DJ clip completed or errored)
+  resumingPlayback → monitoring        (music volume restored)
+  monitoring → idle                    (session ended)
 ```
+
+Note: The coordinator uses **volume ducking** (crossfade) rather than full pause/resume. Music continues playing at reduced volume while the DJ speaks, then fades back to the original volume.
+
+### Crossfade parameters
+
+| Parameter          | Value  |
+|--------------------|--------|
+| Fade-out duration  | 3000ms |
+| Fade-out steps     | 15     |
+| Ducked volume      | 0.2    |
+| Fade-in duration   | 1500ms |
+| Fade-in steps      | 8      |
 
 ---
 
 ## 5. Failure flow
 
 ```
-Any state in PreparingTransition or later:
+Any state during transition:
   │
-  ├─ BanterEngine fails → cancel transition → Monitoring
-  ├─ VoiceEngine fails → cancel transition → Monitoring
-  ├─ SpotifyPlayerService.pause() fails → cancel transition → Monitoring
-  ├─ DJAudioPlayer.play() fails → skip to ResumingPlayback
-  └─ SpotifyPlayerService.resume() fails → retry once → log error → Monitoring
+  ├─ BanterEngine fails → skip transition → continue monitoring
+  ├─ VoiceEngine fails → skip transition → continue monitoring
+  ├─ Fade-out fails → log warning, continue transition anyway
+  ├─ DJ clip playback fails → log warning, proceed to resume
+  ├─ Fade-in fails → snap volume to original → continue monitoring
+  └─ Unexpected error → restore volume → return to monitoring
 ```
 
 ---
@@ -133,16 +149,23 @@ Any state in PreparingTransition or later:
 ```
 Settings panel open
   ├─ Load personas from IndexedDB
-  ├─ User edits or creates persona
+  ├─ User edits or creates persona via persona editor
+  │   ├─ Name, system prompt, voice selection
+  │   ├─ Optional: ElevenLabs voice search and selection
+  │   └─ Speech rate adjustment
   ├─ PersonaService.save(persona)
   ├─ Persona stored in IndexedDB
   └─ Active persona updated in session store
 
 Key management:
-  ├─ User enters OpenAI key
+  ├─ User enters OpenAI key in Settings
   ├─ StorageService.setOpenAIKey(key)
   ├─ Key stored in localStorage
   └─ BanterEngine + VoiceEngine re-initialized with new key
+
+  ├─ User enters ElevenLabs key in Settings (optional)
+  ├─ StorageService.setElevenLabsKey(key)
+  └─ VoiceEngine updated with ElevenLabs config
 
   ├─ User clears OpenAI key
   ├─ StorageService.clearOpenAIKey()

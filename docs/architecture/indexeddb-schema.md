@@ -26,24 +26,17 @@ Stores key/value application settings (typed).
 
 Stores DJ persona definitions.
 
-| Field          | Type     | Notes                              |
-|----------------|----------|------------------------------------|
-| id             | string   | Primary key (UUID)                 |
-| name           | string   | Display name                       |
-| summary        | string   | Short persona description          |
-| tone           | string   | e.g. "dry", "warm", "hyperactive"  |
-| humourLevel    | string   | "low" / "medium" / "high"          |
-| energyLevel    | string   | "low" / "medium" / "high"          |
-| verbosity      | string   | "brief" / "moderate" / "verbose"   |
-| factuality     | string   | "playful" / "balanced" / "grounded"|
-| accent         | string?  | Optional accent/style hint         |
-| voice          | string   | OpenAI voice ID                    |
-| speechRate     | number?  | Optional (0.5–2.0, default 1.0)    |
-| expressiveness | string?  | Optional style hint                |
-| catchphrases   | string[] | Optional recurring phrases         |
-| isPreset       | boolean  | True for built-in presets          |
-| createdAt      | string   | ISO 8601                           |
-| updatedAt      | string   | ISO 8601                           |
+| Field             | Type    | Notes                                        |
+|-------------------|---------|----------------------------------------------|
+| id                | string  | Primary key (UUID)                           |
+| name              | string  | Display name                                 |
+| systemPrompt      | string  | Free-form persona prompt text                |
+| elevenLabsVoiceId | string  | Optional ElevenLabs voice ID                 |
+| voice             | string  | OpenAI TTS voice ID (fallback)               |
+| speechRate        | number  | 0.5–1.5, default 1.0                        |
+| isPreset          | boolean | True for built-in presets                    |
+| createdAt         | string  | ISO 8601                                     |
+| updatedAt         | string  | ISO 8601                                     |
 
 Indexes:
 - `isPreset` (for filtering presets vs custom)
@@ -54,19 +47,22 @@ Indexes:
 
 Stores listener call-in requests.
 
-| Field                | Type    | Notes                                                        |
-|----------------------|---------|--------------------------------------------------------------|
-| id                   | string  | Primary key (UUID)                                           |
-| sessionId            | string  | Session this request belongs to                              |
-| callerName           | string? | Optional caller handle                                       |
-| artistName           | string  | Requested artist                                             |
-| trackName            | string? | Optional specific track                                      |
-| moodSuggestion       | string? | Optional mood hint                                           |
-| message              | string? | Optional short message                                       |
-| submittedAt          | string  | ISO 8601                                                     |
-| status               | string  | "pending" / "accepted" / "deferred" / "rejected" / "fulfilled"|
-| spokenAcknowledgement| boolean | Whether the DJ has spoken about this                         |
-| promisedForLater     | boolean | Whether the DJ implied it would come later                   |
+| Field                | Type    | Notes                                                      |
+|----------------------|---------|---------------------------------------------------------   |
+| id                   | string  | Primary key (UUID)                                         |
+| sessionId            | string  | Session this request belongs to                            |
+| callerName           | string? | Optional caller handle (max 50 chars)                      |
+| artistName           | string  | Requested artist (max 100 chars)                           |
+| trackName            | string? | Optional specific track (max 100 chars)                    |
+| moodSuggestion       | string? | Optional mood hint (max 100 chars)                         |
+| message              | string? | Optional short message (max 200 chars)                     |
+| submittedAt          | string  | ISO 8601                                                   |
+| status               | string  | "pending" / "accepted" / "rejected" / "fulfilled"          |
+| spokenAcknowledgement| boolean | Whether the DJ has spoken about this                       |
+| promisedForLater     | boolean | Whether the DJ implied it would come later                 |
+| playNow              | boolean | Whether the user requested immediate playback              |
+| spotifyUri           | string? | Spotify URI if track was found                             |
+| spotifyTrackTitle    | string? | Resolved track title from Spotify search                   |
 
 Indexes:
 - `sessionId` (for session-scoped queries)
@@ -84,7 +80,6 @@ Stores session metadata.
 | id        | string | Primary key (UUID)          |
 | startedAt | string | ISO 8601                    |
 | endedAt   | string?| ISO 8601, null if active    |
-| mood      | string | Station mood for the session|
 | personaId | string | Active persona              |
 
 Indexes:
@@ -148,6 +143,8 @@ Stores metadata about rendered voice clips (audio may be in Cache Storage or obj
 ### `trackHistory`
 
 Stores recently played track records.
+
+Compound primary key: `[id, sessionId]`
 
 | Field     | Type   | Notes              |
 |-----------|--------|--------------------|
