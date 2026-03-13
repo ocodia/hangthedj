@@ -299,7 +299,9 @@
   border-radius: 3px;
   outline: none;
   cursor: pointer;
-  transition: height 0.15s ease, filter 0.2s ease;
+  transition:
+    height 0.15s ease,
+    filter 0.2s ease;
 }
 
 .volume-slider:hover {
@@ -322,7 +324,9 @@
   background: var(--color-accent);
   box-shadow: 0 0 4px rgba(29, 185, 84, 0.5);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .volume-slider:hover::-webkit-slider-thumb {
@@ -343,7 +347,9 @@
   border: none;
   box-shadow: 0 0 4px rgba(29, 185, 84, 0.5);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .volume-slider:hover::-moz-range-thumb {
