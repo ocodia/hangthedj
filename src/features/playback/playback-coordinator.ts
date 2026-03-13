@@ -32,11 +32,14 @@ export interface PlaybackCoordinator {
   executeTransition(djClipUrl: string): Promise<void>;
   getState(): PlaybackCoordinatorState;
   onStateChange(handler: (state: PlaybackCoordinatorState) => void): () => void;
+  /** Register a callback that fires whenever the coordinator changes the music volume (during fades). */
+  onVolumeChange(handler: (volume: number) => void): () => void;
 }
 
 class PlaybackCoordinatorImpl implements PlaybackCoordinator {
   private _state: PlaybackCoordinatorState = "idle";
   private stateHandlers: Array<(state: PlaybackCoordinatorState) => void> = [];
+  private volumeHandlers: Array<(volume: number) => void> = [];
   private originalVolume = 0.8;
 
   constructor(
@@ -122,6 +125,13 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
     };
   }
 
+  onVolumeChange(handler: (volume: number) => void): () => void {
+    this.volumeHandlers.push(handler);
+    return () => {
+      this.volumeHandlers = this.volumeHandlers.filter((h) => h !== handler);
+    };
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Private helpers
   // ──────────────────────────────────────────────────────────────────────────
@@ -145,6 +155,7 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
         step++;
         const volume = step >= steps ? to : from + delta * step;
         this.spotifyPlayer.setVolume(volume).catch(() => {});
+        this.volumeHandlers.forEach((h) => h(volume));
         if (step >= steps) {
           clearInterval(timer);
           resolve();

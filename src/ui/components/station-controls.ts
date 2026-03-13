@@ -80,6 +80,15 @@ export class StationControls {
     appStore.subscribe("spotify", () => this.render());
     appStore.subscribe("settings", () => this.render());
     appStore.subscribe("persona", () => this.render());
+
+    // Keep the music volume slider in sync when the coordinator fades during transitions
+    this.services.coordinator.onVolumeChange((vol) => {
+      const slider = this.element.querySelector<HTMLInputElement>("#vol-music");
+      const label = this.element.querySelector<HTMLSpanElement>("#vol-music-value");
+      const pct = Math.round(vol * 100);
+      if (slider) slider.value = String(pct);
+      if (label) label.textContent = `${pct}%`;
+    });
   }
 
   private render(): void {
@@ -135,6 +144,18 @@ export class StationControls {
               : `<button id="btn-start" ${!spotify.isConnected ? "disabled" : ""}>Start Session</button>`
         }
       </div>
+      <div class="volume-sliders">
+        <div class="volume-slider-row">
+          <label class="volume-label">🎵 Music</label>
+          <input type="range" id="vol-music" min="0" max="100" value="80" class="volume-slider" />
+          <span class="volume-value" id="vol-music-value">80%</span>
+        </div>
+        <div class="volume-slider-row">
+          <label class="volume-label">🎙️ DJ Voice</label>
+          <input type="range" id="vol-dj" min="0" max="100" value="100" class="volume-slider" />
+          <span class="volume-value" id="vol-dj-value">100%</span>
+        </div>
+      </div>
       <div class="dj-status muted" id="dj-status">
         ${session.isRunning ? "DJ is monitoring the station..." : "Session stopped."}
       </div>
@@ -143,6 +164,32 @@ export class StationControls {
     this.element.querySelector("#btn-start")?.addEventListener("click", () => void this.startSession());
     this.element.querySelector("#btn-stop")?.addEventListener("click", () => void this.stopSession());
     this.element.querySelector("#btn-debug-skip")?.addEventListener("click", () => void this.debugSkipToBanter());
+
+    // Volume sliders
+    const musicSlider = this.element.querySelector<HTMLInputElement>("#vol-music");
+    const djSlider = this.element.querySelector<HTMLInputElement>("#vol-dj");
+    const musicValue = this.element.querySelector<HTMLSpanElement>("#vol-music-value");
+    const djValue = this.element.querySelector<HTMLSpanElement>("#vol-dj-value");
+
+    // Restore current volumes into the sliders
+    this.services.spotifyPlayer.getVolume().then((v) => {
+      if (musicSlider) musicSlider.value = String(Math.round(v * 100));
+      if (musicValue) musicValue.textContent = `${Math.round(v * 100)}%`;
+    }).catch(() => {});
+    const djVol = this.services.djPlayer.getVolume();
+    if (djSlider) djSlider.value = String(Math.round(djVol * 100));
+    if (djValue) djValue.textContent = `${Math.round(djVol * 100)}%`;
+
+    musicSlider?.addEventListener("input", (e) => {
+      const val = Number((e.target as HTMLInputElement).value);
+      if (musicValue) musicValue.textContent = `${val}%`;
+      this.services.spotifyPlayer.setVolume(val / 100).catch(() => {});
+    });
+    djSlider?.addEventListener("input", (e) => {
+      const val = Number((e.target as HTMLInputElement).value);
+      if (djValue) djValue.textContent = `${val}%`;
+      this.services.djPlayer.setVolume(val / 100);
+    });
 
     // Persona dropdown
     this.element.querySelector<HTMLSelectElement>("#persona-select")?.addEventListener("change", async (e) => {
@@ -893,6 +940,12 @@ export class StationControls {
         step++;
         const vol = step >= steps ? to : from + delta * step;
         this.services.spotifyPlayer.setVolume(vol).catch(() => {});
+        // Update the music volume slider to reflect the fade
+        const slider = this.element.querySelector<HTMLInputElement>("#vol-music");
+        const label = this.element.querySelector<HTMLSpanElement>("#vol-music-value");
+        const pct = Math.round(vol * 100);
+        if (slider) slider.value = String(pct);
+        if (label) label.textContent = `${pct}%`;
         if (debugMode && step % 4 === 0) {
           addDjActivityEntry({ type: "system", text: `🔊 Volume: ${Math.round(vol * 100)}%`, debug: true });
         }

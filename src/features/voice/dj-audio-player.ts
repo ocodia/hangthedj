@@ -9,17 +9,21 @@ export interface DJAudioPlayer {
   play(objectUrl: string): Promise<void>;
   stop(): void;
   isPlaying(): boolean;
+  setVolume(volume: number): void;
+  getVolume(): number;
 }
 
 class DJAudioPlayerImpl implements DJAudioPlayer {
   private audio: HTMLAudioElement | null = null;
   private _isPlaying = false;
+  private _volume = 1.0;
 
   async play(objectUrl: string): Promise<void> {
     this.stop(); // Cancel any in-progress playback
 
     return new Promise<void>((resolve, reject) => {
       const audio = new Audio(objectUrl);
+      audio.volume = this._volume;
       this.audio = audio;
       this._isPlaying = true;
 
@@ -54,6 +58,17 @@ class DJAudioPlayerImpl implements DJAudioPlayer {
 
   isPlaying(): boolean {
     return this._isPlaying;
+  }
+
+  setVolume(volume: number): void {
+    this._volume = Math.max(0, Math.min(1, volume));
+    if (this.audio) {
+      this.audio.volume = this._volume;
+    }
+  }
+
+  getVolume(): number {
+    return this._volume;
   }
 }
 
