@@ -562,9 +562,9 @@ export class StationControls {
         text: `🎤 ${banterResult.text}`,
       });
 
-      // Play intro and start fading music in 2.5s before the clip ends
+      // Play intro and start fading music in 3s before the clip ends
       await this.services.djPlayer.playWithFadeCallback(voiceResult.objectUrl, 2.5, () => {
-        this._fadeSpotifyVolume(0, this.userMusicVolume, 2_500);
+        this._fadeSpotifyVolume(0, this.userMusicVolume, 3_000);
       });
       this.services.scheduler.recordInsertion("stationIdent");
     } catch (err) {
