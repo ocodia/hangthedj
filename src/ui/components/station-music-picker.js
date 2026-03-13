@@ -98,13 +98,14 @@ export class StationMusicPicker {
 
     const typeLabels = { artist: "Artist", album: "Album", track: "Track", playlist: "Playlist" };
     const typeIcons = { artist: "🎤", album: "💿", track: "🎵", playlist: "📋" };
-    const subtitle = item.type === "artist"
-      ? typeLabels[item.type]
-      : item.type === "track"
-        ? item.artistName
-        : item.type === "album"
+    const subtitle =
+      item.type === "artist"
+        ? typeLabels[item.type]
+        : item.type === "track"
           ? item.artistName
-          : item.ownerName ?? "Playlist";
+          : item.type === "album"
+            ? item.artistName
+            : (item.ownerName ?? "Playlist");
 
     chip.innerHTML = `
       ${item.imageUrl ? `<img class="music-picker-art" src="${escapeAttr(item.imageUrl)}" alt="" />` : `<span class="music-picker-art-placeholder">${typeIcons[item.type] ?? "🎵"}</span>`}
@@ -127,12 +128,7 @@ export class StationMusicPicker {
 
     try {
       const data = await this.spotifyPlayer.searchAll(query, 4);
-      const items = [
-        ...data.artists,
-        ...data.albums,
-        ...data.tracks,
-        ...data.playlists,
-      ];
+      const items = [...data.artists, ...data.albums, ...data.tracks, ...data.playlists];
 
       if (items.length === 0) {
         resultsEl.innerHTML = `<div class="music-picker-loading muted">No results found.</div>`;
@@ -170,9 +166,7 @@ export class StationMusicPicker {
 
   _renderResultItem(item) {
     const typeIcons = { artist: "🎤", album: "💿", track: "🎵", playlist: "📋" };
-    const subtitle = item.type === "artist"
-      ? "Artist"
-      : item.artistName ?? item.ownerName ?? "";
+    const subtitle = item.type === "artist" ? "Artist" : (item.artistName ?? item.ownerName ?? "");
 
     const row = document.createElement("div");
     row.className = "music-picker-result";
@@ -195,12 +189,7 @@ export class StationMusicPicker {
 }
 
 function escapeHtml(str) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function escapeAttr(str) {

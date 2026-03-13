@@ -352,9 +352,7 @@ class SpotifyPlayerServiceImpl {
     const token = await this.authService.getAccessToken();
     if (!token) throw new Error("No access token available");
 
-    const body = contextUri.startsWith("spotify:track:")
-      ? { uris: [contextUri] }
-      : { context_uri: contextUri };
+    const body = contextUri.startsWith("spotify:track:") ? { uris: [contextUri] } : { context_uri: contextUri };
 
     const params = new URLSearchParams({ device_id: this.deviceId });
     const res = await fetch(`https://api.spotify.com/v1/me/player/play?${params.toString()}`, {
