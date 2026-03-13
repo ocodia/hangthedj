@@ -67,8 +67,6 @@ export class NowPlayingBar {
         </div>
       </div>
     `;
-
-
   }
 }
 

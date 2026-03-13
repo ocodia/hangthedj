@@ -2,9 +2,9 @@
  * RequestLinePanel: the listener call-in UI with interactive Spotify search.
  */
 
-import { appStore } from '../../stores/app-store.js';
+import { appStore } from "../../stores/app-store.js";
 
-const CALLER_NAME_KEY = 'htdj_caller_name';
+const CALLER_NAME_KEY = "htdj_caller_name";
 
 export class RequestLinePanel {
   constructor(services) {
@@ -12,13 +12,13 @@ export class RequestLinePanel {
     this.searchTimer = null;
     this.selectedTrack = null;
 
-    this.element = document.createElement('div');
-    this.element.className = 'request-line-panel panel';
+    this.element = document.createElement("div");
+    this.element.className = "request-line-panel panel";
     this._render();
   }
 
   _render() {
-    const savedName = localStorage.getItem(CALLER_NAME_KEY) ?? '';
+    const savedName = localStorage.getItem(CALLER_NAME_KEY) ?? "";
 
     this.element.innerHTML = `
       <h3>📞 Call In</h3>
@@ -65,33 +65,33 @@ export class RequestLinePanel {
       <div class="request-history" id="request-history"></div>
     `;
 
-    const form = this.element.querySelector('#request-form');
-    form.addEventListener('submit', (e) => {
+    const form = this.element.querySelector("#request-form");
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
       void this._submitRequest();
     });
 
-    const searchInput = this.element.querySelector('#search-input');
-    searchInput.addEventListener('input', () => this._onSearchInput());
-    searchInput.addEventListener('focus', () => this._onSearchInput());
-    document.addEventListener('click', (e) => {
+    const searchInput = this.element.querySelector("#search-input");
+    searchInput.addEventListener("input", () => this._onSearchInput());
+    searchInput.addEventListener("focus", () => this._onSearchInput());
+    document.addEventListener("click", (e) => {
       if (!this.element.contains(e.target)) {
         this._hideSearchResults();
       }
     });
 
-    this.element.querySelector('#btn-clear-selection')?.addEventListener('click', () => {
+    this.element.querySelector("#btn-clear-selection")?.addEventListener("click", () => {
       this._clearSelection();
     });
 
-    appStore.subscribe('requests', () => this._renderHistory());
+    appStore.subscribe("requests", () => this._renderHistory());
   }
 
   // ── Spotify search ──────────────────────────────────────────────────────────
 
   _onSearchInput() {
     if (this.searchTimer) clearTimeout(this.searchTimer);
-    const query = this.element.querySelector('#search-input')?.value?.trim() ?? '';
+    const query = this.element.querySelector("#search-input")?.value?.trim() ?? "";
     if (query.length < 2) {
       this._hideSearchResults();
       return;
@@ -100,7 +100,7 @@ export class RequestLinePanel {
   }
 
   async _performSearch(query) {
-    const spotify = appStore.get('spotify');
+    const spotify = appStore.get("spotify");
     if (!spotify.isConnected) return;
 
     try {
@@ -112,28 +112,28 @@ export class RequestLinePanel {
   }
 
   _renderSearchResults(tracks) {
-    const container = this.element.querySelector('#search-results');
+    const container = this.element.querySelector("#search-results");
     if (tracks.length === 0) {
-      container.style.display = 'none';
+      container.style.display = "none";
       return;
     }
 
     container.innerHTML = tracks
       .map(
         (t) => `
-      <div class="search-result-item" data-id="${escapeAttr(t.id)}" data-uri="${escapeAttr(t.uri ?? '')}" data-title="${escapeAttr(t.title)}" data-artist="${escapeAttr(t.artistName)}" data-album="${escapeAttr(t.albumName ?? '')}" data-artwork="${escapeAttr(t.artworkUrl ?? '')}">
-        <img class="search-result-art" src="${escapeAttr(t.artworkUrl ?? '')}" alt="" />
+      <div class="search-result-item" data-id="${escapeAttr(t.id)}" data-uri="${escapeAttr(t.uri ?? "")}" data-title="${escapeAttr(t.title)}" data-artist="${escapeAttr(t.artistName)}" data-album="${escapeAttr(t.albumName ?? "")}" data-artwork="${escapeAttr(t.artworkUrl ?? "")}">
+        <img class="search-result-art" src="${escapeAttr(t.artworkUrl ?? "")}" alt="" />
         <div class="search-result-info">
           <span class="search-result-title">${escapeHtml(t.title)}</span>
           <span class="search-result-artist muted">${escapeHtml(t.artistName)}</span>
         </div>
       </div>`,
       )
-      .join('');
-    container.style.display = 'block';
+      .join("");
+    container.style.display = "block";
 
-    container.querySelectorAll('.search-result-item').forEach((el) => {
-      el.addEventListener('click', () => {
+    container.querySelectorAll(".search-result-item").forEach((el) => {
+      el.addEventListener("click", () => {
         const ds = el.dataset;
         this._selectTrack({
           id: ds.id,
@@ -151,99 +151,99 @@ export class RequestLinePanel {
     this.selectedTrack = track;
     this._hideSearchResults();
 
-    const searchInput = this.element.querySelector('#search-input');
+    const searchInput = this.element.querySelector("#search-input");
     searchInput.value = `${track.title} — ${track.artistName}`;
     searchInput.disabled = true;
 
-    const field = this.element.querySelector('#selected-track-field');
-    field.style.display = 'block';
-    this.element.querySelector('#selected-artwork').src = track.artworkUrl ?? '';
-    this.element.querySelector('#selected-title').textContent = track.title;
-    this.element.querySelector('#selected-artist').textContent = track.artistName;
+    const field = this.element.querySelector("#selected-track-field");
+    field.style.display = "block";
+    this.element.querySelector("#selected-artwork").src = track.artworkUrl ?? "";
+    this.element.querySelector("#selected-title").textContent = track.title;
+    this.element.querySelector("#selected-artist").textContent = track.artistName;
   }
 
   _clearSelection() {
     this.selectedTrack = null;
-    const searchInput = this.element.querySelector('#search-input');
+    const searchInput = this.element.querySelector("#search-input");
     searchInput.disabled = false;
-    searchInput.value = '';
+    searchInput.value = "";
     searchInput.focus();
-    this.element.querySelector('#selected-track-field').style.display = 'none';
+    this.element.querySelector("#selected-track-field").style.display = "none";
   }
 
   _hideSearchResults() {
-    const el = this.element.querySelector('#search-results');
-    if (el) el.style.display = 'none';
+    const el = this.element.querySelector("#search-results");
+    if (el) el.style.display = "none";
   }
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   async _submitRequest() {
-    const session = appStore.get('session');
-    const feedback = this.element.querySelector('#request-feedback');
+    const session = appStore.get("session");
+    const feedback = this.element.querySelector("#request-feedback");
 
     if (!session.activeSession) {
-      feedback.style.display = 'block';
-      feedback.className = 'request-feedback error-text';
-      feedback.textContent = 'Start a session first before calling in.';
+      feedback.style.display = "block";
+      feedback.className = "request-feedback error-text";
+      feedback.textContent = "Start a session first before calling in.";
       return;
     }
 
-    const callerName = this._getValue('caller-name');
+    const callerName = this._getValue("caller-name");
     if (callerName) {
       localStorage.setItem(CALLER_NAME_KEY, callerName);
     }
 
-    const searchInput = this.element.querySelector('#search-input');
+    const searchInput = this.element.querySelector("#search-input");
     const rawQuery = searchInput.value.trim();
 
     const submission = {
       callerName,
       artistName: this.selectedTrack ? this.selectedTrack.artistName : rawQuery,
       trackName: this.selectedTrack ? this.selectedTrack.title : undefined,
-      message: this._getValue('message'),
-      playNow: this.element.querySelector('#play-now')?.checked ?? false,
+      message: this._getValue("message"),
+      playNow: this.element.querySelector("#play-now")?.checked ?? false,
     };
 
-    const btn = this.element.querySelector('#btn-submit-request');
+    const btn = this.element.querySelector("#btn-submit-request");
     btn.disabled = true;
 
     try {
       const request = await this.services.requestManager.submit(session.activeSession.id, submission);
 
-      feedback.style.display = 'block';
-      feedback.className = 'request-feedback';
-      feedback.style.color = 'var(--color-accent)';
-      feedback.textContent = `Request for ${request.artistName}${request.trackName ? ' — ' + request.trackName : ''} is in the queue!`;
+      feedback.style.display = "block";
+      feedback.className = "request-feedback";
+      feedback.style.color = "var(--color-accent)";
+      feedback.textContent = `Request for ${request.artistName}${request.trackName ? " — " + request.trackName : ""} is in the queue!`;
 
-      this.element.querySelector('#message').value = '';
-      this.element.querySelector('#play-now').checked = false;
+      this.element.querySelector("#message").value = "";
+      this.element.querySelector("#play-now").checked = false;
       this._clearSelection();
 
       const all = await this.services.requestManager.getAll(session.activeSession.id);
-      appStore.update('requests', {
+      appStore.update("requests", {
         requests: all,
-        pendingCount: all.filter((r) => r.status === 'pending').length,
+        pendingCount: all.filter((r) => r.status === "pending").length,
       });
     } catch (err) {
-      feedback.style.display = 'block';
-      feedback.className = 'request-feedback error-text';
-      feedback.textContent = err instanceof Error ? err.message : 'Request failed.';
+      feedback.style.display = "block";
+      feedback.className = "request-feedback error-text";
+      feedback.textContent = err instanceof Error ? err.message : "Request failed.";
     } finally {
       btn.disabled = false;
       setTimeout(() => {
-        feedback.style.display = 'none';
+        feedback.style.display = "none";
       }, 4000);
     }
   }
 
   _renderHistory() {
-    const history = this.element.querySelector('#request-history');
+    const history = this.element.querySelector("#request-history");
     if (!history) return;
 
-    const requests = appStore.get('requests').requests;
+    const requests = appStore.get("requests").requests;
     if (requests.length === 0) {
-      history.innerHTML = '';
+      history.innerHTML = "";
       return;
     }
 
@@ -256,11 +256,11 @@ export class RequestLinePanel {
           .map(
             (r) => `
           <li class="request-item status-${r.status}">
-            <span class="request-artist"${r.status === 'fulfilled' ? ' style="text-decoration:line-through;opacity:0.6"' : ''}>${escapeHtml(r.artistName)}${r.trackName ? ' — ' + escapeHtml(r.trackName) : ''}</span>
-            <span class="request-status muted">${r.status === 'fulfilled' ? 'Played' : r.status}</span>
+            <span class="request-artist"${r.status === "fulfilled" ? ' style="text-decoration:line-through;opacity:0.6"' : ""}>${escapeHtml(r.artistName)}${r.trackName ? " — " + escapeHtml(r.trackName) : ""}</span>
+            <span class="request-status muted">${r.status === "fulfilled" ? "Played" : r.status}</span>
           </li>`,
           )
-          .join('')}
+          .join("")}
       </ul>
     `;
   }
@@ -272,9 +272,9 @@ export class RequestLinePanel {
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function escapeAttr(str) {
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
