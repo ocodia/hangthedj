@@ -12,18 +12,18 @@ The request line allows users to "call in" to the station to suggest artists, tr
 interface ListenerRequest {
   id: string;
   sessionId: string;
-  callerName?: string;       // Optional handle or name (max 50 chars)
-  artistName: string;        // Required: who they want to hear (max 100 chars)
-  trackName?: string;        // Optional: specific track (max 100 chars)
-  moodSuggestion?: string;   // Optional: e.g. "something chill" (max 100 chars)
-  message?: string;          // Optional: short message to the DJ (max 200 chars)
-  submittedAt: string;       // ISO 8601
+  callerName?: string; // Optional handle or name (max 50 chars)
+  artistName: string; // Required: who they want to hear (max 100 chars)
+  trackName?: string; // Optional: specific track (max 100 chars)
+  moodSuggestion?: string; // Optional: e.g. "something chill" (max 100 chars)
+  message?: string; // Optional: short message to the DJ (max 200 chars)
+  submittedAt: string; // ISO 8601
   status: RequestStatus;
   spokenAcknowledgement: boolean; // Has the DJ spoken about this?
-  promisedForLater: boolean;      // Did the DJ imply it's coming?
-  playNow: boolean;               // Did the user request immediate playback?
-  spotifyUri?: string;            // Spotify URI if track was found via search
-  spotifyTrackTitle?: string;     // Resolved track title from Spotify
+  promisedForLater: boolean; // Did the DJ imply it's coming?
+  playNow: boolean; // Did the user request immediate playback?
+  spotifyUri?: string; // Spotify URI if track was found via search
+  spotifyTrackTitle?: string; // Resolved track title from Spotify
 }
 
 type RequestStatus = "pending" | "accepted" | "rejected" | "fulfilled";
@@ -43,6 +43,7 @@ accepted → fulfilled (Artist/track has been introduced or played)
 ### "Play right now" requests
 
 When a user submits a request with the "Play right now" toggle enabled:
+
 1. The app immediately searches Spotify for the requested track
 2. If found: the track is added to the Spotify queue, status becomes `accepted`, and immediate banter is generated
 3. If not found: the request is rejected
@@ -71,11 +72,13 @@ When a user submits a request with the "Play right now" toggle enabled:
 ### Accepted request
 
 Banter example:
+
 > "We've got [CallerName] on the line asking for [Artist]. Coming up soon — great shout."
 
 ### Deferred request
 
 Banter example (used when there are many pending requests):
+
 > "Someone's asking for [Artist]. Not quite the vibe right now, but let's see where the night goes."
 
 Note: The scheduler classifies this as `requestDeferment` segment type, but the request status remains `pending` — there is no separate `deferred` status.
@@ -83,11 +86,13 @@ Note: The scheduler classifies this as `requestDeferment` segment type, but the 
 ### Rejected request
 
 Banter example:
+
 > "Appreciate the request for [Artist], but we're keeping it [current mood] tonight. Maybe next time."
 
 ### Fulfilled introduction
 
 Banter example:
+
 > "This one goes out to [CallerName] who asked for [Artist] earlier — here they are."
 
 ---
@@ -114,6 +119,7 @@ Banter example:
 ## Consistency requirement
 
 If the DJ says a request "is coming up", the system must:
+
 - Set `promisedForLater = true`
 - Ensure the scheduler prioritises that request
 - If for any reason it cannot be fulfilled (e.g. session ends), the promise is silently dropped

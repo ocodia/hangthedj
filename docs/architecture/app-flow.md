@@ -119,13 +119,13 @@ Note: The coordinator uses **volume ducking** (crossfade) rather than full pause
 
 ### Crossfade parameters
 
-| Parameter          | Value  |
-|--------------------|--------|
-| Fade-out duration  | 3000ms |
-| Fade-out steps     | 15     |
-| Ducked volume      | 0.2    |
-| Fade-in duration   | 1500ms |
-| Fade-in steps      | 8      |
+| Parameter         | Value  |
+| ----------------- | ------ |
+| Fade-out duration | 3000ms |
+| Fade-out steps    | 15     |
+| Ducked volume     | 0.2    |
+| Fade-in duration  | 1500ms |
+| Fade-in steps     | 8      |
 
 ---
 

@@ -10,17 +10,17 @@ A Persona defines how the DJ sounds, behaves, and speaks. Personas are stored in
 
 Each persona is stored as a plain object in IndexedDB with the following fields:
 
-| Field              | Type    | Notes                                                    |
-|--------------------|---------|----------------------------------------------------------|
-| id                 | string  | UUID, primary key                                        |
-| name               | string  | Display name, e.g. "DJ Pirate"                           |
-| systemPrompt       | string  | Free-form prompt text defining the persona's personality |
-| elevenLabsVoiceId  | string  | Optional ElevenLabs voice ID for premium TTS             |
-| voice              | string  | OpenAI TTS voice ID (fallback when ElevenLabs not used)  |
-| speechRate         | number  | 0.5–1.5, default 1.0                                    |
-| isPreset           | boolean | True for built-in presets                                |
-| createdAt          | string  | ISO 8601                                                 |
-| updatedAt          | string  | ISO 8601                                                 |
+| Field             | Type    | Notes                                                    |
+| ----------------- | ------- | -------------------------------------------------------- |
+| id                | string  | UUID, primary key                                        |
+| name              | string  | Display name, e.g. "DJ Pirate"                           |
+| systemPrompt      | string  | Free-form prompt text defining the persona's personality |
+| elevenLabsVoiceId | string  | Optional ElevenLabs voice ID for premium TTS             |
+| voice             | string  | OpenAI TTS voice ID (fallback when ElevenLabs not used)  |
+| speechRate        | number  | 0.5–1.5, default 1.0                                     |
+| isPreset          | boolean | True for built-in presets                                |
+| createdAt         | string  | ISO 8601                                                 |
+| updatedAt         | string  | ISO 8601                                                 |
 
 The persona model uses a **free-form `systemPrompt`** rather than structured personality fields (tone, humourLevel, etc.). This gives users full control over the DJ's personality through natural language, and allows presets to embed style, delivery, and word count constraints directly in the prompt.
 
@@ -29,6 +29,7 @@ The persona model uses a **free-form `systemPrompt`** rather than structured per
 ## Preset personas
 
 ### DJ Pirate (preset)
+
 ```json
 {
   "name": "DJ Pirate",
@@ -41,6 +42,7 @@ The persona model uses a **free-form `systemPrompt`** rather than structured per
 ```
 
 ### DJ Classic Rock (preset)
+
 ```json
 {
   "name": "DJ Classic Rock",

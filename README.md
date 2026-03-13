@@ -46,6 +46,7 @@ Open `http://localhost:8080` in your browser.
 On first launch, HangTheDJ will guide you through a two-step setup:
 
 #### Step 1: Spotify Client ID
+
 1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app (any name)
 3. In the app settings, add a **Redirect URI** that matches your app URL, e.g.:
@@ -54,10 +55,13 @@ On first launch, HangTheDJ will guide you through a two-step setup:
 4. Copy your **Client ID** and paste it into the HangTheDJ setup screen
 
 #### Step 2: Connect with Spotify
+
 Click "Connect with Spotify" and authorise the app.
 
 #### Step 3: OpenAI key (in Settings)
+
 In the Settings panel, enter your OpenAI API key (`sk-...`). This enables:
+
 - **AI banter**: The DJ generates contextual commentary between tracks
 - **Text-to-speech**: The DJ's words are spoken aloud
 

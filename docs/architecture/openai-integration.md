@@ -3,6 +3,7 @@
 ## Overview
 
 HangTheDJ uses two OpenAI APIs:
+
 1. **Chat Completions** — for DJ banter script generation
 2. **Text-to-Speech (TTS)** — for voice rendering of generated scripts
 
@@ -23,7 +24,9 @@ Both are called directly from the browser using the user's own API key.
 ## BanterEngine
 
 ### Model
+
 `gpt-5.3-chat-latest` is the model used in v1:
+
 - fast enough for near-real-time use
 - cost-effective for short DJ scripts
 - good instruction-following for persona prompts
@@ -51,13 +54,13 @@ Plain text, no markdown, no stage directions, no quotes. Just the spoken line.
 
 ### Length targets
 
-| Segment type          | Target words | Max seconds |
-|-----------------------|--------------|-------------|
-| transition            | 20–40        | 10–15       |
-| request acknowledgement| 25–50       | 12–18       |
-| vibe-setting line     | 15–30        | 8–12        |
-| station ident         | 10–20        | 5–8         |
-| artist introduction   | 20–40        | 10–15       |
+| Segment type            | Target words | Max seconds |
+| ----------------------- | ------------ | ----------- |
+| transition              | 20–40        | 10–15       |
+| request acknowledgement | 25–50        | 12–18       |
+| vibe-setting line       | 15–30        | 8–12        |
+| station ident           | 10–20        | 5–8         |
+| artist introduction     | 20–40        | 10–15       |
 
 ### Error handling
 
@@ -70,10 +73,12 @@ Plain text, no markdown, no stage directions, no quotes. Just the spoken line.
 ## VoiceEngine
 
 ### Model
+
 `tts-1` for low latency in v1.
 `tts-1-hd` as an option for higher quality if the user prefers it.
 
 ### Voices available (as of 2024)
+
 `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`
 
 These are mapped to personas. The persona's `voice` field should be one of these identifiers.
@@ -123,6 +128,7 @@ HangTheDJ supports **ElevenLabs** as an alternative TTS provider for higher-qual
 ### Provider selection
 
 The VoiceEngine automatically selects the provider per render request:
+
 - If an ElevenLabs API key is set **and** the active persona has an `elevenLabsVoiceId`: use ElevenLabs
 - Otherwise: use OpenAI TTS
 

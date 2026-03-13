@@ -3,6 +3,7 @@
 ## Overview
 
 HangTheDJ uses two Spotify APIs:
+
 1. **Spotify Web Playback SDK** — for in-browser playback and state
 2. **Spotify Web API** — for metadata and auth token validation
 
@@ -15,6 +16,7 @@ HangTheDJ uses two Spotify APIs:
 Spotify supports PKCE for public clients (no client secret required). This makes it suitable for browser SPAs.
 
 Steps:
+
 1. App generates a code verifier and code challenge (SHA-256)
 2. App redirects user to Spotify's authorization endpoint with `code_challenge` and `response_type=code`
 3. User approves
@@ -42,6 +44,7 @@ user-modify-playback-state
 ### Token refresh
 
 Spotify access tokens expire after 1 hour. The app should:
+
 - Check token expiry before each API call
 - Refresh using the refresh token if needed
 - Store the new token
@@ -60,6 +63,7 @@ Spotify access tokens expire after 1 hour. The app should:
 ### SDK loading
 
 The SDK script is loaded from:
+
 ```
 https://sdk.scdn.co/spotify-player.js
 ```
@@ -79,13 +83,13 @@ const player = new Spotify.Player({
 
 ### Key events
 
-| Event               | Description                                      |
-|---------------------|--------------------------------------------------|
-| `ready`             | Player connected and device ID available          |
-| `not_ready`         | Player disconnected                              |
+| Event                  | Description                                    |
+| ---------------------- | ---------------------------------------------- |
+| `ready`                | Player connected and device ID available       |
+| `not_ready`            | Player disconnected                            |
 | `player_state_changed` | Playback state updated (track, position, etc.) |
-| `authentication_error` | Auth token issue                              |
-| `account_error`     | Premium account required                         |
+| `authentication_error` | Auth token issue                               |
+| `account_error`        | Premium account required                       |
 
 ### Device activation
 
@@ -96,8 +100,8 @@ TODO: Determine whether automatic device transfer is acceptable UX or whether th
 ### Pause / resume
 
 ```ts
-await player.pause();   // pause playback
-await player.resume();  // resume playback
+await player.pause(); // pause playback
+await player.resume(); // resume playback
 ```
 
 ### Track state
@@ -107,6 +111,7 @@ const state: Spotify.PlaybackState = await player.getCurrentState();
 ```
 
 Key fields:
+
 - `state.track_window.current_track` — current track metadata
 - `state.paused` — whether playback is paused
 - `state.position` — current position in ms
@@ -125,48 +130,49 @@ Key fields:
 
 The app uses a broader set of Web API calls than originally planned:
 
-| Call                                  | Purpose                                |
-|---------------------------------------|----------------------------------------|
-| GET /v1/search (type=track)           | Search for tracks (request line)       |
-| GET /v1/search (type=artist,album,playlist) | Music picker context search      |
-| POST /v1/me/player/queue              | Add requested tracks to queue          |
-| PUT /v1/me/player/play                | Start playback with context URI        |
-| PUT /v1/me/player                     | Transfer playback to HangTheDJ device  |
-| PUT /v1/me/player/shuffle             | Enable/disable shuffle mode            |
+| Call                                        | Purpose                               |
+| ------------------------------------------- | ------------------------------------- |
+| GET /v1/search (type=track)                 | Search for tracks (request line)      |
+| GET /v1/search (type=artist,album,playlist) | Music picker context search           |
+| POST /v1/me/player/queue                    | Add requested tracks to queue         |
+| PUT /v1/me/player/play                      | Start playback with context URI       |
+| PUT /v1/me/player                           | Transfer playback to HangTheDJ device |
+| PUT /v1/me/player/shuffle                   | Enable/disable shuffle mode           |
 
 ### SpotifyPlayerService methods
 
-| Method               | Description                                             |
-|----------------------|---------------------------------------------------------|
-| `initialize(auth)`   | Load SDK, create player, register listeners             |
-| `connect()`          | Connect player if not already connected                 |
-| `disconnect()`       | Disconnect player, clear state                          |
-| `getCurrentTrack()`  | Return current normalized track                         |
-| `getPlaybackState()` | Return current playback state                           |
-| `getNextTrack()`     | Return next track from SDK track window                 |
-| `getDeviceId()`      | Return virtual device ID                                |
-| `pause()`            | Pause playback                                          |
-| `resume()`           | Resume playback                                         |
-| `seek(positionMs)`   | Seek to position                                        |
-| `nextTrack()`        | Skip to next track                                      |
-| `setVolume(vol)`     | Set volume (0–1)                                         |
-| `getVolume()`        | Get current volume                                      |
-| `setShuffle(bool)`   | Enable/disable shuffle via Web API                      |
-| `transferPlayback()` | Transfer playback to HangTheDJ device via Web API       |
-| `playContext(uri)`   | Start playback from a context URI (artist/album/playlist/track) |
-| `searchTrack(query)` | Search for a single track, return normalized result     |
-| `searchTracks(q, n)` | Search for multiple tracks                              |
-| `searchAll(query)`   | Search artists, albums, playlists (for music picker)    |
-| `addToQueue(uri)`    | Add a track URI to the Spotify queue                    |
-| `fetchCurrentPosition()` | Get interpolated playback position                  |
-| `onStateChange(fn)`  | Subscribe to playback state changes                     |
-| `onTrackChange(fn)`  | Subscribe to track change events                        |
+| Method                   | Description                                                     |
+| ------------------------ | --------------------------------------------------------------- |
+| `initialize(auth)`       | Load SDK, create player, register listeners                     |
+| `connect()`              | Connect player if not already connected                         |
+| `disconnect()`           | Disconnect player, clear state                                  |
+| `getCurrentTrack()`      | Return current normalized track                                 |
+| `getPlaybackState()`     | Return current playback state                                   |
+| `getNextTrack()`         | Return next track from SDK track window                         |
+| `getDeviceId()`          | Return virtual device ID                                        |
+| `pause()`                | Pause playback                                                  |
+| `resume()`               | Resume playback                                                 |
+| `seek(positionMs)`       | Seek to position                                                |
+| `nextTrack()`            | Skip to next track                                              |
+| `setVolume(vol)`         | Set volume (0–1)                                                |
+| `getVolume()`            | Get current volume                                              |
+| `setShuffle(bool)`       | Enable/disable shuffle via Web API                              |
+| `transferPlayback()`     | Transfer playback to HangTheDJ device via Web API               |
+| `playContext(uri)`       | Start playback from a context URI (artist/album/playlist/track) |
+| `searchTrack(query)`     | Search for a single track, return normalized result             |
+| `searchTracks(q, n)`     | Search for multiple tracks                                      |
+| `searchAll(query)`       | Search artists, albums, playlists (for music picker)            |
+| `addToQueue(uri)`        | Add a track URI to the Spotify queue                            |
+| `fetchCurrentPosition()` | Get interpolated playback position                              |
+| `onStateChange(fn)`      | Subscribe to playback state changes                             |
+| `onTrackChange(fn)`      | Subscribe to track change events                                |
 
 ---
 
 ## Disconnect and cleanup
 
 On logout or session end:
+
 ```ts
 await player.disconnect();
 ```
