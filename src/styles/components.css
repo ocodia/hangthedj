@@ -711,3 +711,29 @@
   background: #333;
   color: var(--color-text);
 }
+
+/* ─── Persona Editor ──────────────────────────────────────────────── */
+
+.persona-editor {
+  margin-top: 0.75rem;
+}
+
+.persona-editor-form {
+  background: var(--color-bg-surface);
+  border: 1px solid #333;
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.persona-editor-form h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.persona-editor-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1rem;
+}

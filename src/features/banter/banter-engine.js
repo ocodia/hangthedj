@@ -15,9 +15,6 @@ const WORDS_PER_SECOND = 2.5;
 function buildUserPrompt(req) {
   const parts = [];
 
-  const mood = req.stationMood ? `Station mood: ${req.stationMood}.` : '';
-  if (mood) parts.push(mood);
-
   if (req.currentTrack) {
     const trackLabel =
       req.segmentType === 'transition'
@@ -136,7 +133,7 @@ class BanterEngineImpl {
 
     const wordCount = text.split(/\s+/).length;
     const estimatedDurationSeconds = Math.round(wordCount / WORDS_PER_SECOND);
-    const tags = [req.segmentType, req.stationMood ?? ''].filter(Boolean);
+    const tags = [req.segmentType].filter(Boolean);
     const fingerprint = makeFingerprint(text);
 
     return { text, estimatedDurationSeconds, tags, fingerprint, systemPrompt, userPrompt };

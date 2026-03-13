@@ -14,9 +14,6 @@ import {
   getElevenLabsKey,
   setElevenLabsKey,
   clearElevenLabsKey,
-  getElevenLabsVoiceId,
-  setElevenLabsVoiceId,
-  clearElevenLabsVoiceId,
   setSpotifyClientId,
   clearSpotifyClientId,
   clearSpotifyTokens,
@@ -79,17 +76,15 @@ export class AppShell {
     let voiceEngine = null;
     const hasKey = hasOpenAIKey();
     const hasElKey = hasElevenLabsKey();
-    const elVoiceId = getElevenLabsVoiceId();
     updateAiState({
       hasOpenAiKey: hasKey,
       hasElevenLabsKey: hasElKey,
-      elevenLabsVoiceId: elVoiceId,
     });
 
     if (hasKey) {
       const key = getOpenAIKey();
       banterEngine = createBanterEngine(key, personaService);
-      voiceEngine = createVoiceEngine(key, hasElKey ? getElevenLabsKey() : null, elVoiceId);
+      voiceEngine = createVoiceEngine(key, hasElKey ? getElevenLabsKey() : null);
     }
 
     this.services = {
@@ -133,15 +128,14 @@ export class AppShell {
     if (!app) throw new Error("No #app element found in DOM");
 
     const services = this.services;
-    renderApp(app, services, {
+    const callbacks = {
       onOpenAIKeySet: (key) => {
         setOpenAIKey(key);
         updateAiState({ hasOpenAiKey: true, lastError: null });
         if (services) {
           services.banterEngine = createBanterEngine(key, personaService);
           const elKey = hasElevenLabsKey() ? getElevenLabsKey() : null;
-          const elVoice = getElevenLabsVoiceId();
-          services.voiceEngine = createVoiceEngine(key, elKey, elVoice);
+          services.voiceEngine = createVoiceEngine(key, elKey);
         }
       },
       onOpenAIKeyClear: () => {
@@ -156,29 +150,14 @@ export class AppShell {
         setElevenLabsKey(key);
         updateAiState({ hasElevenLabsKey: true });
         if (services?.voiceEngine) {
-          services.voiceEngine.setElevenLabsConfig(key, getElevenLabsVoiceId());
+          services.voiceEngine.setElevenLabsConfig(key);
         }
       },
       onElevenLabsKeyClear: () => {
         clearElevenLabsKey();
-        clearElevenLabsVoiceId();
-        updateAiState({ hasElevenLabsKey: false, elevenLabsVoiceId: null });
+        updateAiState({ hasElevenLabsKey: false });
         if (services?.voiceEngine) {
-          services.voiceEngine.setElevenLabsConfig(null, null);
-        }
-      },
-      onElevenLabsVoiceSelect: (voiceId) => {
-        setElevenLabsVoiceId(voiceId);
-        updateAiState({ elevenLabsVoiceId: voiceId });
-        if (services?.voiceEngine) {
-          services.voiceEngine.setElevenLabsConfig(getElevenLabsKey(), voiceId);
-        }
-      },
-      onElevenLabsVoiceClear: () => {
-        clearElevenLabsVoiceId();
-        updateAiState({ elevenLabsVoiceId: null });
-        if (services?.voiceEngine) {
-          services.voiceEngine.setElevenLabsConfig(getElevenLabsKey(), null);
+          services.voiceEngine.setElevenLabsConfig(null);
         }
       },
       getElevenLabsKey: () => getElevenLabsKey(),
@@ -196,7 +175,12 @@ export class AppShell {
         spotifyAuth.logout();
         updateAuthState({ isAuthenticated: false, userId: null, displayName: null });
       },
-    });
+    };
+
+    // Attach callbacks to services so components can access them
+    services.callbacks = callbacks;
+
+    renderApp(app, services, callbacks);
   }
 
   getServices() {

@@ -17,31 +17,12 @@ import {
 } from '../../stores/app-store.js';
 import { saveSettings, loadSettings, saveSession } from '../../features/storage/storage-service.js';
 import { generateUUID } from '../../utils.js';
-
-const MOODS = [
-  { value: 'freestyle', label: 'Freestyle' },
-  { value: 'late-night', label: 'Late Night' },
-  { value: 'upbeat', label: 'Upbeat' },
-  { value: 'nostalgic', label: 'Nostalgic' },
-  { value: 'focus', label: 'Focus' },
-  { value: 'indie-evening', label: 'Indie Evening' },
-];
-
-const MOOD_PROMPTS = {
-  freestyle: 'Anything goes — let the DJ read the room and go with the flow.',
-  'late-night': 'Late night, relaxed, atmospheric vibes. Dim the lights.',
-  upbeat: 'High energy, feel-good, upbeat bangers. Keep the party going.',
-  nostalgic: 'Throwbacks and classics. Take us down memory lane.',
-  focus: 'Lo-fi, ambient, concentration-friendly. Keep it smooth and unobtrusive.',
-  'indie-evening': 'Indie, alternative, chill evening listening. Warm and intimate.',
-};
+import { PersonaEditor } from './persona-editor.js';
 
 export class StationControls {
   constructor(services) {
     this.services = services;
     this.sessionId = null;
-    this.sessionMood = 'freestyle';
-    this.sessionMoodPrompt = MOOD_PROMPTS['freestyle'];
     this.unsubscribeTrackChange = null;
     this.unsubscribeRequests = null;
     this.positionInterval = null;
@@ -58,6 +39,14 @@ export class StationControls {
     this.pendingCallIns = [];
     this.isProcessingCallIn = false;
     this.processedCallInSummaries = [];
+
+    this.personaEditor = new PersonaEditor(services, {
+      onClose: () => {
+        this.personaEditor.close();
+        this._render();
+      },
+      getElevenLabsKey: () => this.services.callbacks?.getElevenLabsKey?.() ?? null,
+    });
 
     this.element = document.createElement('div');
     this.element.className = 'station-controls panel';
@@ -94,10 +83,6 @@ export class StationControls {
     const ai = appStore.get('ai');
     const spotify = appStore.get('spotify');
 
-    const moodOptions = MOODS.map((m) => `<option value="${m.value}" ${m.value === this.sessionMood ? 'selected' : ''}>${m.label}</option>`).join('');
-
-    const currentMoodPrompt = session.isRunning ? this.sessionMoodPrompt : (MOOD_PROMPTS[this.sessionMood] ?? MOOD_PROMPTS['freestyle']);
-
     const persona = appStore.get('persona');
     const personaOptions = persona.personas
       .map(
@@ -117,19 +102,13 @@ export class StationControls {
       </div>
       <div class="field">
         <label for="persona-select">DJ Persona</label>
-        <select id="persona-select" ${session.isRunning ? 'disabled' : ''}>${personaOptions}</select>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <select id="persona-select" ${session.isRunning ? 'disabled' : ''} style="flex:1">${personaOptions}</select>
+          <button class="secondary btn-sm" id="btn-edit-persona" ${session.isRunning ? 'disabled' : ''}>Edit</button>
+          <button class="secondary btn-sm" id="btn-add-persona" ${session.isRunning ? 'disabled' : ''}>+ New</button>
+        </div>
       </div>
-      <div class="field">
-        <label for="mood-select">Station Mood</label>
-        <select id="mood-select" ${session.isRunning ? 'disabled' : ''}>${moodOptions}</select>
-      </div>
-      <div class="field">
-        <label for="mood-prompt">Mood Prompt</label>
-        <textarea id="mood-prompt" rows="2" maxlength="300" ${session.isRunning ? 'disabled' : ''}
-          placeholder="Describe the vibe you want the DJ to set…"
-          style="width:100%;resize:vertical;font-size:0.85rem">${escapeHtml(currentMoodPrompt)}</textarea>
-        <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">This prompt shapes the DJ's personality and banter style for the session.</p>
-      </div>
+      <div id="persona-editor-mount"></div>
       ${!ai.hasOpenAiKey ? `<p class="muted" style="font-size:0.8rem">Set your OpenAI key in Settings to enable DJ banter.</p>` : ''}
       ${!spotify.isConnected && !session.isRunning ? `<p class="muted" style="font-size:0.8rem">Connect Spotify to start a session.</p>` : ''}
       <div class="station-actions">
@@ -162,6 +141,20 @@ export class StationControls {
     this.element.querySelector('#btn-start')?.addEventListener('click', () => void this._startSession());
     this.element.querySelector('#btn-stop')?.addEventListener('click', () => void this._stopSession());
     this.element.querySelector('#btn-debug-skip')?.addEventListener('click', () => void this._debugSkipToBanter());
+
+    this.element.querySelector('#btn-edit-persona')?.addEventListener('click', () => {
+      const active = appStore.get('persona').activePersona;
+      if (active) {
+        this.personaEditor.open(active);
+        const mount = this.element.querySelector('#persona-editor-mount');
+        if (mount) { mount.innerHTML = ''; mount.appendChild(this.personaEditor.element); }
+      }
+    });
+    this.element.querySelector('#btn-add-persona')?.addEventListener('click', () => {
+      this.personaEditor.open(null);
+      const mount = this.element.querySelector('#persona-editor-mount');
+      if (mount) { mount.innerHTML = ''; mount.appendChild(this.personaEditor.element); }
+    });
 
     const musicSlider = this.element.querySelector('#vol-music');
     const djSlider = this.element.querySelector('#vol-dj');
@@ -209,12 +202,6 @@ export class StationControls {
         saveSettings({ ...current, activePersonaId: id });
       }
     });
-
-    this.element.querySelector('#mood-select')?.addEventListener('change', (e) => {
-      this.sessionMood = e.target.value;
-      const textarea = this.element.querySelector('#mood-prompt');
-      if (textarea) textarea.value = MOOD_PROMPTS[this.sessionMood] ?? '';
-    });
   }
 
   // ── Session lifecycle ───────────────────────────────────────────────────────
@@ -235,27 +222,19 @@ export class StationControls {
   }
 
   async _startSession() {
-    const moodSelect = this.element.querySelector('#mood-select');
-    const mood = (moodSelect?.value ?? 'freestyle');
-    const moodPromptTextarea = this.element.querySelector('#mood-prompt');
-    const moodPrompt = moodPromptTextarea?.value?.trim() || MOOD_PROMPTS[mood];
     const personaState = appStore.get('persona');
 
     if (!personaState.activePersona) {
-      alert('Please select a DJ persona in Settings first.');
+      alert('Please select a DJ persona first.');
       return;
     }
 
-    this.sessionMood = mood;
-    this.sessionMoodPrompt = moodPrompt;
     this.sessionId = generateUUID();
     const now = new Date().toISOString();
 
     const session = {
       id: this.sessionId,
       startedAt: now,
-      mood,
-      moodPrompt,
       personaId: personaState.activePersona.id,
     };
 
@@ -285,25 +264,12 @@ export class StationControls {
 
     // 2. Play DJ intro before starting music
     addDjActivityEntry({ type: 'system', text: 'Session starting… DJ is warming up 🎤', debug: true });
-    await this._playDjIntro(mood, moodPrompt);
+    await this._playDjIntro();
 
     // 3. Set volume to 0 so music fades in after transfer
     await this.services.spotifyPlayer.setVolume(0).catch(() => {});
 
-    // 4. Transfer playback to start the first track
-    try {
-      await this.services.spotifyPlayer.transferPlayback();
-      addDjActivityEntry({ type: 'system', text: 'Music started — DJ is on the air!', debug: true });
-    } catch (err) {
-      console.error('[StationControls] Playback transfer failed:', err);
-      addDjActivityEntry({ type: 'error', text: 'Could not start Spotify playback. Try playing a track in Spotify first.' });
-    }
-
-    // 5. Fade music in to the user's chosen volume
-    await this._fadeSpotifyVolume(0, this.userMusicVolume, 2_000);
-    this.services.coordinator.setTargetVolume(this.userMusicVolume);
-
-    // 6. Subscribe to track changes
+    // 4. Subscribe to track changes (before transfer so the first track event is captured)
     this.unsubscribeTrackChange = this.services.spotifyPlayer.onTrackChange((track) => {
       if (!track || !this.sessionId) return;
       updatePlaybackState({ currentTrack: track });
@@ -326,7 +292,20 @@ export class StationControls {
       this.pendingTransitionForTrackId = null;
     });
 
-    // 7. Subscribe to request state changes
+    // 5. Transfer playback to start the first track
+    try {
+      await this.services.spotifyPlayer.transferPlayback();
+      addDjActivityEntry({ type: 'system', text: 'Music started — DJ is on the air!', debug: true });
+    } catch (err) {
+      console.error('[StationControls] Playback transfer failed:', err);
+      addDjActivityEntry({ type: 'error', text: 'Could not start Spotify playback. Try playing a track in Spotify first.' });
+    }
+
+    // 6. Fade music in to the user's chosen volume
+    await this._fadeSpotifyVolume(0, this.userMusicVolume, 2_000);
+    this.services.coordinator.setTargetVolume(this.userMusicVolume);
+
+    // 8. Subscribe to request state changes
     this.unsubscribeRequests = appStore.subscribe('requests', (reqState) => {
       if (!this.sessionId) return;
       const newRequests = reqState.requests.filter((r) => r.status === 'pending' && !r.spokenAcknowledgement && !r.spotifyUri);
@@ -337,7 +316,7 @@ export class StationControls {
       }
     });
 
-    // 8. Start position monitor (polls every 1s)
+    // 9. Start position monitor (polls every 1s)
     this._startPositionMonitor();
   }
 
@@ -407,7 +386,6 @@ export class StationControls {
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType: 'signOff',
-        stationMood: this.sessionMoodPrompt,
         currentTrack: appStore.get('playback').currentTrack,
         recentTracks: appStore.get('playback').recentTracks,
         requestSummary: [],
@@ -416,7 +394,6 @@ export class StationControls {
           maxWords: 60,
           maxSeconds: 25,
           familySafe: appStore.get('settings').schedulerConfig.familySafe,
-          factualityMode: personaState.activePersona.factuality,
         },
       });
 
@@ -428,6 +405,7 @@ export class StationControls {
       const voiceResult = await voiceEngine.render({
         text: banterResult.text,
         voice: personaState.activePersona.voice,
+        elevenLabsVoiceId: personaState.activePersona.elevenLabsVoiceId,
         speechRate: personaState.activePersona.speechRate,
         format: 'mp3',
       });
@@ -450,7 +428,7 @@ export class StationControls {
 
   // ── DJ Intro ────────────────────────────────────────────────────────────────
 
-  async _playDjIntro(_mood, moodPrompt) {
+  async _playDjIntro() {
     const { banterEngine, voiceEngine } = this.services;
     if (!banterEngine || !voiceEngine) {
       addDjActivityEntry({ type: 'system', text: 'DJ banter disabled (no OpenAI key).', debug: true });
@@ -466,7 +444,6 @@ export class StationControls {
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType: 'stationIdent',
-        stationMood: moodPrompt,
         currentTrack: null,
         recentTracks: [],
         requestSummary: [],
@@ -475,7 +452,6 @@ export class StationControls {
           maxWords: 60,
           maxSeconds: 25,
           familySafe: appStore.get('settings').schedulerConfig.familySafe,
-          factualityMode: personaState.activePersona.factuality,
         },
       });
 
@@ -486,6 +462,7 @@ export class StationControls {
       const voiceResult = await voiceEngine.render({
         text: banterResult.text,
         voice: personaState.activePersona.voice,
+        elevenLabsVoiceId: personaState.activePersona.elevenLabsVoiceId,
         speechRate: personaState.activePersona.speechRate,
         format: 'mp3',
       });
@@ -609,7 +586,7 @@ export class StationControls {
       currentTrack,
       this.services.spotifyPlayer.getPlaybackState(),
       personaState.activePersona,
-      this.sessionMood,
+      null,
       [],
       [],
       appStore.get('settings').schedulerConfig,
@@ -631,7 +608,6 @@ export class StationControls {
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType: decision.segmentType,
-        stationMood: this.sessionMoodPrompt,
         currentTrack,
         nextTrack: this.services.spotifyPlayer.getNextTrack(),
         recentTracks: appStore.get('playback').recentTracks,
@@ -641,7 +617,6 @@ export class StationControls {
           maxWords: 50,
           maxSeconds: 20,
           familySafe: appStore.get('settings').schedulerConfig.familySafe,
-          factualityMode: personaState.activePersona.factuality,
         },
       });
 
@@ -656,6 +631,7 @@ export class StationControls {
       const voiceResult = await voiceEngine.render({
         text: banterResult.text,
         voice: personaState.activePersona.voice,
+        elevenLabsVoiceId: personaState.activePersona.elevenLabsVoiceId,
         speechRate: personaState.activePersona.speechRate,
         format: 'mp3',
       });
@@ -775,7 +751,6 @@ export class StationControls {
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType,
-        stationMood: this.sessionMoodPrompt,
         currentTrack: includeCurrentTrack ? appStore.get('playback').currentTrack : null,
         recentTracks: includeCurrentTrack ? appStore.get('playback').recentTracks : [],
         requestSummary,
@@ -784,7 +759,6 @@ export class StationControls {
           maxWords: 60,
           maxSeconds: 25,
           familySafe: appStore.get('settings').schedulerConfig.familySafe,
-          factualityMode: personaState.activePersona.factuality,
         },
       });
       this._logPromptsIfDebug(banterResult);
@@ -810,7 +784,6 @@ export class StationControls {
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType,
-        stationMood: this.sessionMoodPrompt,
         currentTrack: appStore.get('playback').currentTrack,
         recentTracks: appStore.get('playback').recentTracks,
         requestSummary,
@@ -819,7 +792,6 @@ export class StationControls {
           maxWords: 25,
           maxSeconds: 10,
           familySafe: appStore.get('settings').schedulerConfig.familySafe,
-          factualityMode: personaState.activePersona.factuality,
         },
       });
 
@@ -831,6 +803,7 @@ export class StationControls {
       const voiceResult = await voiceEngine.render({
         text: banterResult.text,
         voice: personaState.activePersona.voice,
+        elevenLabsVoiceId: personaState.activePersona.elevenLabsVoiceId,
         speechRate: personaState.activePersona.speechRate,
         format: 'mp3',
       });

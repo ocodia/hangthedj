@@ -46,7 +46,6 @@ function createInitialStore() {
     ai: {
       hasOpenAiKey: false,
       hasElevenLabsKey: false,
-      elevenLabsVoiceId: null,
       isGenerating: false,
       isRendering: false,
       lastError: null,

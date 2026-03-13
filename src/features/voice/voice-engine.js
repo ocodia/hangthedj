@@ -17,28 +17,28 @@ async function hashString(str) {
 const objectUrlCache = new Map();
 
 class VoiceEngineImpl {
-  constructor(apiKey, elevenLabsKey = null, elevenLabsVoiceId = null) {
+  constructor(apiKey, elevenLabsKey = null) {
     this.apiKey = apiKey;
     this.elevenLabsKey = elevenLabsKey;
-    this.elevenLabsVoiceId = elevenLabsVoiceId;
   }
 
-  setElevenLabsConfig(key, voiceId) {
+  setElevenLabsConfig(key) {
     this.elevenLabsKey = key;
-    this.elevenLabsVoiceId = voiceId;
   }
 
-  _useElevenLabs() {
-    return !!(this.elevenLabsKey && this.elevenLabsVoiceId);
+  _useElevenLabs(req) {
+    return !!(this.elevenLabsKey && req.elevenLabsVoiceId);
   }
 
   async render(req) {
-    const provider = this._useElevenLabs() ? "elevenlabs" : "openai";
-    const cacheKey = await hashString(`${provider}|${req.text}|${req.voice}|${req.speechRate ?? 1.0}|${req.format}`);
+    const useEL = this._useElevenLabs(req);
+    const provider = useEL ? "elevenlabs" : "openai";
+    const voiceId = useEL ? req.elevenLabsVoiceId : req.voice;
+    const cacheKey = await hashString(`${provider}|${req.text}|${voiceId}|${req.speechRate ?? 1.0}|${req.format}`);
     const cached = objectUrlCache.get(cacheKey);
     if (cached) return cached;
 
-    const blob = this._useElevenLabs() ? await this._renderElevenLabs(req) : await this._renderOpenAI(req);
+    const blob = useEL ? await this._renderElevenLabs(req) : await this._renderOpenAI(req);
 
     const objectUrl = URL.createObjectURL(blob);
     const result = { blob, objectUrl, cacheKey };
@@ -71,7 +71,7 @@ class VoiceEngineImpl {
   }
 
   async _renderElevenLabs(req) {
-    const voiceId = this.elevenLabsVoiceId;
+    const voiceId = req.elevenLabsVoiceId;
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
       method: "POST",
       headers: {
@@ -102,8 +102,8 @@ class VoiceEngineImpl {
   }
 }
 
-export function createVoiceEngine(apiKey, elevenLabsKey = null, elevenLabsVoiceId = null) {
-  return new VoiceEngineImpl(apiKey, elevenLabsKey, elevenLabsVoiceId);
+export function createVoiceEngine(apiKey, elevenLabsKey = null) {
+  return new VoiceEngineImpl(apiKey, elevenLabsKey);
 }
 
 /**

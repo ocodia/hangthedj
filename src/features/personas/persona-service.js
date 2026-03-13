@@ -1,6 +1,6 @@
 /**
  * PersonaService: manages DJ personas stored in IndexedDB.
- * Resolves persona fields into a system prompt block for the banter engine.
+ * Each persona carries a system prompt and an optional ElevenLabs voice ID.
  */
 
 import {
@@ -15,59 +15,32 @@ import { generateUUID } from '../../utils.js';
 
 const PRESETS = [
   {
-    name: 'Nova Nightshift',
-    summary: 'A smooth late-night DJ with dry wit and a love of album deep cuts.',
-    tone: 'dry',
-    humourLevel: 'medium',
-    energyLevel: 'low',
-    verbosity: 'brief',
-    factuality: 'balanced',
-    voice: 'nova',
-    speechRate: 0.95,
-    expressiveness: 'calm and understated',
-    profanityPolicy: 'none',
-    familySafe: true,
-    isPreset: true,
-  },
-  {
-    name: 'Hype Machine',
-    summary: 'An energetic tastemaker who lives for new discoveries and big moments.',
-    tone: 'enthusiastic',
-    humourLevel: 'high',
-    energyLevel: 'high',
-    verbosity: 'moderate',
-    factuality: 'playful',
-    voice: 'echo',
-    speechRate: 1.15,
-    expressiveness: 'upbeat and expressive',
-    profanityPolicy: 'none',
-    familySafe: true,
-    isPreset: true,
-  },
-  {
-    name: 'The Curator',
-    summary: 'A thoughtful, slightly nerdy music presenter who knows everything about artists.',
-    tone: 'warm',
-    humourLevel: 'low',
-    energyLevel: 'medium',
-    verbosity: 'moderate',
-    factuality: 'grounded',
-    voice: 'fable',
+    name: 'DJ Pirate',
+    systemPrompt:
+      'Gritty pirate radio DJ broadcasting from a hidden studio.\n' +
+      'Tone: mischievous, rebellious, underground.\n' +
+      'Delivery: relaxed but edgy pacing with attitude.\n' +
+      'Keep responses 30–50 words.\n\n' +
+      "Sound like you're broadcasting illegal late-night underground music.",
+    elevenLabsVoiceId: '7ktJCfz71Z44ppWOelh3',
+    voice: 'onyx',
     speechRate: 1.0,
-    expressiveness: 'considered and warm',
-    profanityPolicy: 'none',
-    familySafe: true,
+    isPreset: true,
+  },
+  {
+    name: 'DJ Classic Rock',
+    systemPrompt:
+      'Loud, charismatic 1980s rock station DJ.\n' +
+      'Tone: confident, bold, slightly over-the-top.\n' +
+      'Delivery: dramatic emphasis, punchy rhythm.\n' +
+      'Keep responses 30–50 words.\n\n' +
+      'Sound like a classic rock station host introducing a stadium anthem.',
+    elevenLabsVoiceId: 'mKoqwDP2laxTdq1gEgU6',
+    voice: 'echo',
+    speechRate: 1.0,
     isPreset: true,
   },
 ];
-
-// ── Verbosity → word count mapping ───────────────────────────────────────────
-
-const VERBOSITY_WORDS = {
-  brief: 'under 30 words',
-  moderate: '30–50 words',
-  verbose: '50–80 words',
-};
 
 // ── PersonaService ────────────────────────────────────────────────────────────
 
@@ -128,43 +101,16 @@ class PersonaServiceImpl {
 
   resolveSystemPrompt(persona) {
     const lines = [
-      `You are ${persona.name}, a radio DJ. ${persona.summary}`,
+      `You are ${persona.name}, a radio DJ.`,
       '',
-      `Style: ${persona.tone} tone, ${persona.humourLevel} humour, ${persona.energyLevel} energy.`,
-      `Delivery: ${persona.expressiveness ?? 'natural and engaging'}.`,
-      `Keep responses ${VERBOSITY_WORDS[persona.verbosity]}.`,
-    ];
-
-    if (persona.accent) {
-      lines.push(`Accent/regional style: ${persona.accent}.`);
-    }
-
-    if (persona.profanityPolicy === 'none') {
-      lines.push('Use no profanity or offensive language.');
-    } else if (persona.profanityPolicy === 'mild') {
-      lines.push('Mild language is acceptable but keep it tasteful.');
-    }
-
-    if (persona.familySafe) {
-      lines.push('Keep all content family-friendly and suitable for all ages.');
-    }
-
-    if (persona.catchphrases && persona.catchphrases.length > 0) {
-      lines.push(`You occasionally use these expressions: ${persona.catchphrases.join(', ')}.`);
-    }
-
-    if (persona.disallowedTopics && persona.disallowedTopics.length > 0) {
-      lines.push(`Never discuss: ${persona.disallowedTopics.join(', ')}.`);
-    }
-
-    lines.push(
+      persona.systemPrompt,
       '',
       'Output rules:',
       '- Speak directly as the DJ with no stage directions, markdown, or quotes.',
       '- Do not explain what you are doing — just deliver the line.',
       '- Do not start with \'I\' or the DJ name.',
       '- Sound natural and spoken, not written.',
-    );
+    ];
 
     return lines.join('\n');
   }
