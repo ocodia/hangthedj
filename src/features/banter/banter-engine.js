@@ -71,12 +71,12 @@ function buildUserPrompt(req) {
       if (req.nextTrack) {
         parts.push(
           `Deliver a brief station ident — who you are, what the station is. ` +
-          `Then hype the first track coming up: "${req.nextTrack.title}" by ${req.nextTrack.artistName}. Keep it punchy.`,
+            `Then hype the first track coming up: "${req.nextTrack.title}" by ${req.nextTrack.artistName}. Keep it punchy.`,
         );
       } else if (req.currentTrack) {
         parts.push(
           `Deliver a brief station ident — who you are, what the station is. ` +
-          `Then hype the first track: "${req.currentTrack.title}" by ${req.currentTrack.artistName}. Keep it punchy.`,
+            `Then hype the first track: "${req.currentTrack.title}" by ${req.currentTrack.artistName}. Keep it punchy.`,
         );
       } else {
         parts.push("Deliver a brief station ident — who you are, what the station is. Keep it punchy.");
