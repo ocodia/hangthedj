@@ -1,0 +1,137 @@
+/**
+ * SettingsPanel: OpenAI key management, app settings, and Spotify setup.
+ */
+
+import { appStore, updateSettings } from '../../stores/app-store.js';
+import { saveSettings, loadSettings, hasSpotifyClientId } from '../../features/storage/storage-service.js';
+
+export class SettingsPanel {
+  constructor(callbacks) {
+    this.callbacks = callbacks;
+    this.isExpanded = false;
+
+    this.element = document.createElement('div');
+    this.element.className = 'settings-panel panel';
+    this._render();
+    appStore.subscribe('ai', () => this._render());
+  }
+
+  _render() {
+    const ai = appStore.get('ai');
+
+    this.element.innerHTML = `
+      <div class="settings-header" id="settings-toggle">
+        <h3>⚙️ Settings</h3>
+        <span class="settings-toggle-icon">${this.isExpanded ? '▲' : '▼'}</span>
+      </div>
+      <div class="settings-body" style="display:${this.isExpanded ? 'block' : 'none'}">
+        <h4>OpenAI Key</h4>
+        <p class="muted" style="font-size:0.8rem;margin-bottom:0.5rem">
+          Your key is stored locally in your browser only.
+          OpenAI usage is billed to your own account.
+        </p>
+        ${
+          ai.hasOpenAiKey
+            ? `<div class="key-status">
+              <span style="color:var(--color-accent)">✓ Key set</span>
+              <button class="secondary btn-sm" id="btn-clear-key" style="margin-left:0.75rem">Clear key</button>
+            </div>`
+            : `<div class="field">
+              <label for="openai-key">API Key</label>
+              <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off" />
+              <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">Never shared. Stored in your browser only.</p>
+            </div>
+            <button id="btn-save-key">Save Key</button>`
+        }
+        <hr style="border-color:#333;margin:1rem 0" />
+        <div class="field">
+          <label for="dj-frequency">DJ Frequency</label>
+          <select id="dj-frequency">
+            <option value="every" ${appStore.get('settings').schedulerConfig.djFrequency === 'every' ? 'selected' : ''}>After Every Track (debug)</option>
+            <option value="rarely" ${appStore.get('settings').schedulerConfig.djFrequency === 'rarely' ? 'selected' : ''}>Rarely (every 4+ tracks)</option>
+            <option value="sometimes" ${appStore.get('settings').schedulerConfig.djFrequency === 'sometimes' ? 'selected' : ''}>Sometimes (every 2+ tracks)</option>
+            <option value="often" ${appStore.get('settings').schedulerConfig.djFrequency === 'often' ? 'selected' : ''}>Often (every track)</option>
+          </select>
+        </div>
+        <div class="field toggle-field">
+          <label class="toggle-switch">
+            <input type="checkbox" id="family-safe" ${appStore.get('settings').schedulerConfig.familySafe ? 'checked' : ''} />
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label-text">Family-safe mode</span>
+        </div>
+        <div class="field toggle-field">
+          <label class="toggle-switch">
+            <input type="checkbox" id="debug-mode" ${appStore.get('settings').debugMode ? 'checked' : ''} />
+            <span class="toggle-slider"></span>
+          </label>
+          <div class="toggle-label-group">
+            <span class="toggle-label-text">Debug mode</span>
+            <span class="muted" style="font-size:0.75rem">Show all activity details in DJ log</span>
+          </div>
+        </div>
+        <hr style="border-color:#333;margin:1rem 0" />
+        <h4>Spotify Setup</h4>
+        ${
+          hasSpotifyClientId()
+            ? `<div class="key-status">
+              <span style="color:var(--color-accent)">✓ Client ID set</span>
+              <button class="secondary btn-sm" id="btn-clear-spotify-id" style="margin-left:0.75rem">Clear</button>
+            </div>`
+            : `<p class="muted" style="font-size:0.8rem">No Spotify Client ID set. Sign out and set it on the login screen.</p>`
+        }
+      </div>
+    `;
+
+    this.element.querySelector('#settings-toggle')?.addEventListener('click', () => {
+      this.isExpanded = !this.isExpanded;
+      this._render();
+    });
+
+    this.element.querySelector('#btn-save-key')?.addEventListener('click', () => {
+      const keyInput = this.element.querySelector('#openai-key');
+      const key = keyInput?.value?.trim();
+      if (key && key.startsWith('sk-')) {
+        this.callbacks.onOpenAIKeySet(key);
+      } else {
+        alert('Please enter a valid OpenAI API key (starts with sk-).');
+      }
+    });
+
+    this.element.querySelector('#btn-clear-key')?.addEventListener('click', () => {
+      if (confirm('Clear your OpenAI key? DJ banter will be disabled.')) {
+        this.callbacks.onOpenAIKeyClear();
+      }
+    });
+
+    this.element.querySelector('#dj-frequency')?.addEventListener('change', (e) => {
+      const freq = e.target.value;
+      const current = loadSettings();
+      const updated = { ...current, schedulerConfig: { ...current.schedulerConfig, djFrequency: freq } };
+      saveSettings(updated);
+      updateSettings(updated);
+    });
+
+    this.element.querySelector('#family-safe')?.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      const current = loadSettings();
+      const updated = { ...current, schedulerConfig: { ...current.schedulerConfig, familySafe: checked } };
+      saveSettings(updated);
+      updateSettings(updated);
+    });
+
+    this.element.querySelector('#debug-mode')?.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      const current = loadSettings();
+      const updated = { ...current, debugMode: checked };
+      saveSettings(updated);
+      updateSettings(updated);
+    });
+
+    this.element.querySelector('#btn-clear-spotify-id')?.addEventListener('click', () => {
+      if (confirm('Clear your Spotify Client ID? You will need to log in again.')) {
+        this.callbacks.onSpotifyClientIdClear();
+      }
+    });
+  }
+}
