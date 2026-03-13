@@ -2,20 +2,20 @@
  * NowPlayingBar: shows current track info from Spotify.
  */
 
-import { appStore, updatePlaybackState } from '../../stores/app-store.js';
+import { appStore, updatePlaybackState } from "../../stores/app-store.js";
 
 export class NowPlayingBar {
   constructor(services) {
     this.services = services;
-    this.element = document.createElement('div');
-    this.element.className = 'now-playing-bar panel';
-    this._render(appStore.get('playback'));
+    this.element = document.createElement("div");
+    this.element.className = "now-playing-bar panel";
+    this._render(appStore.get("playback"));
 
-    appStore.subscribe('playback', (state) => {
+    appStore.subscribe("playback", (state) => {
       this._render(state);
     });
-    appStore.subscribe('session', () => {
-      this._render(appStore.get('playback'));
+    appStore.subscribe("session", () => {
+      this._render(appStore.get("playback"));
     });
 
     if (services?.spotifyPlayer) {
@@ -47,7 +47,7 @@ export class NowPlayingBar {
 
     this.element.innerHTML = `
       <div class="now-playing-content">
-        ${track.artworkUrl ? `<img class="track-artwork" src="${track.artworkUrl}" alt="Album art" />` : ''}
+        ${track.artworkUrl ? `<img class="track-artwork" src="${track.artworkUrl}" alt="Album art" />` : ""}
         <div class="track-info">
           <span class="track-title">${escapeHtml(track.title)}</span>
           <span class="track-artist muted">${escapeHtml(track.artistName)}</span>
@@ -58,20 +58,20 @@ export class NowPlayingBar {
             <span class="track-time muted">${formatTime(progressSec)} / ${formatTime(durationSec)}  ·  ${remainingSec}s left</span>
           </div>
         </div>
-        <button class="playback-toggle" id="btn-play-pause" title="${playback.isPlaying ? 'Pause' : 'Play'}" ${!appStore.get('session').isRunning ? 'disabled' : ''}>
-          ${playback.isPlaying ? '⏸' : '▶'}
+        <button class="playback-toggle" id="btn-play-pause" title="${playback.isPlaying ? "Pause" : "Play"}" ${!appStore.get("session").isRunning ? "disabled" : ""}>
+          ${playback.isPlaying ? "⏸" : "▶"}
         </button>
         <div class="now-playing-meta">
           <div class="now-playing-label">♫ Now playing</div>
           <div class="debug-info muted">
             <span class="debug-coordinator" title="Coordinator state">${coordinatorState}</span>
           </div>
-          ${nextTrack ? `<div class="next-track-info muted" title="Next in queue">⏭ ${escapeHtml(nextTrack.title)} — ${escapeHtml(nextTrack.artistName)}</div>` : ''}
+          ${nextTrack ? `<div class="next-track-info muted" title="Next in queue">⏭ ${escapeHtml(nextTrack.title)} — ${escapeHtml(nextTrack.artistName)}</div>` : ""}
         </div>
       </div>
     `;
 
-    this.element.querySelector('#btn-play-pause')?.addEventListener('click', () => {
+    this.element.querySelector("#btn-play-pause")?.addEventListener("click", () => {
       if (!this.services?.spotifyPlayer) return;
       if (playback.isPlaying) {
         this.services.spotifyPlayer.pause().catch(console.error);
@@ -85,9 +85,9 @@ export class NowPlayingBar {
 function formatTime(totalSeconds) {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

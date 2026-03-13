@@ -55,7 +55,10 @@ class DJAudioPlayerImpl {
       audio.onended = () => {
         this._isPlaying = false;
         this.audio = null;
-        if (!callbackFired) { callbackFired = true; callback(); }
+        if (!callbackFired) {
+          callbackFired = true;
+          callback();
+        }
         resolve();
       };
 
@@ -84,7 +87,7 @@ class DJAudioPlayerImpl {
   stop() {
     if (this.audio) {
       this.audio.pause();
-      this.audio.src = '';
+      this.audio.src = "";
       this.audio = null;
     }
     this._isPlaying = false;

@@ -3,7 +3,7 @@
  * Handles SDK loading, normalized state, track changes, and Spotify Web API calls.
  */
 
-const SDK_SCRIPT_URL = 'https://sdk.scdn.co/spotify-player.js';
+const SDK_SCRIPT_URL = "https://sdk.scdn.co/spotify-player.js";
 
 class SpotifyPlayerServiceImpl {
   constructor() {
@@ -27,13 +27,13 @@ class SpotifyPlayerServiceImpl {
     this.authService = authService;
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new Error('Spotify SDK ready callback timed out after 10 seconds'));
+        reject(new Error("Spotify SDK ready callback timed out after 10 seconds"));
       }, 10_000);
 
       window.onSpotifyWebPlaybackSDKReady = () => {
         clearTimeout(timeoutId);
         this.player = new window.Spotify.Player({
-          name: 'HangTheDJ',
+          name: "HangTheDJ",
           getOAuthToken: async (cb) => {
             const token = await authService.getAccessToken();
             if (token) cb(token);
@@ -41,35 +41,35 @@ class SpotifyPlayerServiceImpl {
           volume: 1.0,
         });
 
-        this.player.addListener('ready', (data) => {
+        this.player.addListener("ready", (data) => {
           const { device_id } = data;
           this.deviceId = device_id;
-          console.log('[SpotifyPlayer] Ready, device ID:', device_id);
+          console.log("[SpotifyPlayer] Ready, device ID:", device_id);
           resolve();
         });
 
-        this.player.addListener('not_ready', () => {
-          console.warn('[SpotifyPlayer] Device not ready');
+        this.player.addListener("not_ready", () => {
+          console.warn("[SpotifyPlayer] Device not ready");
           this.deviceId = null;
         });
 
-        this.player.addListener('player_state_changed', (state) => {
+        this.player.addListener("player_state_changed", (state) => {
           if (!state) return;
           this._handleStateChange(state);
         });
 
-        this.player.addListener('authentication_error', (err) => {
-          console.error('[SpotifyPlayer] Auth error:', err);
-          reject(new Error('Spotify authentication error'));
+        this.player.addListener("authentication_error", (err) => {
+          console.error("[SpotifyPlayer] Auth error:", err);
+          reject(new Error("Spotify authentication error"));
         });
 
-        this.player.addListener('account_error', (err) => {
-          console.error('[SpotifyPlayer] Account error (Premium required?):', err);
-          reject(new Error('Spotify account error — Premium required for browser playback'));
+        this.player.addListener("account_error", (err) => {
+          console.error("[SpotifyPlayer] Account error (Premium required?):", err);
+          reject(new Error("Spotify account error — Premium required for browser playback"));
         });
 
         this.player.connect().then((ok) => {
-          if (!ok) reject(new Error('Spotify player failed to connect'));
+          if (!ok) reject(new Error("Spotify player failed to connect"));
         });
       };
 
@@ -82,9 +82,9 @@ class SpotifyPlayerServiceImpl {
 
   async connect() {
     if (this.deviceId) return;
-    if (!this.player) throw new Error('Player not initialized');
+    if (!this.player) throw new Error("Player not initialized");
     const ok = await this.player.connect();
-    if (!ok) throw new Error('Spotify player failed to connect');
+    if (!ok) throw new Error("Spotify player failed to connect");
   }
 
   disconnect() {
@@ -103,47 +103,47 @@ class SpotifyPlayerServiceImpl {
   }
 
   async pause() {
-    if (!this.player) throw new Error('Player not initialized');
+    if (!this.player) throw new Error("Player not initialized");
     await this.player.pause();
   }
 
   async seek(positionMs) {
-    if (!this.player) throw new Error('Player not initialized');
+    if (!this.player) throw new Error("Player not initialized");
     await this.player.seek(positionMs);
   }
 
   async nextTrack() {
-    if (!this.player) throw new Error('Player not initialized');
+    if (!this.player) throw new Error("Player not initialized");
     await this.player.nextTrack();
   }
 
   async setVolume(volume) {
-    if (!this.player) throw new Error('Player not initialized');
+    if (!this.player) throw new Error("Player not initialized");
     await this.player.setVolume(Math.max(0, Math.min(1, volume)));
   }
 
   async getVolume() {
-    if (!this.player) throw new Error('Player not initialized');
+    if (!this.player) throw new Error("Player not initialized");
     return this.player.getVolume();
   }
 
   async resume() {
-    if (!this.player) throw new Error('Player not initialized');
+    if (!this.player) throw new Error("Player not initialized");
     await this.player.resume();
   }
 
   async transferPlayback() {
-    if (!this.deviceId) throw new Error('No device ID — player not ready');
-    if (!this.authService) throw new Error('Auth service not available');
+    if (!this.deviceId) throw new Error("No device ID — player not ready");
+    if (!this.authService) throw new Error("Auth service not available");
 
     const token = await this.authService.getAccessToken();
-    if (!token) throw new Error('No access token available');
+    if (!token) throw new Error("No access token available");
 
-    const res = await fetch('https://api.spotify.com/v1/me/player', {
-      method: 'PUT',
+    const res = await fetch("https://api.spotify.com/v1/me/player", {
+      method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         device_ids: [this.deviceId],
@@ -156,7 +156,7 @@ class SpotifyPlayerServiceImpl {
       throw new Error(`Transfer playback failed: ${res.status} ${text}`);
     }
 
-    console.log('[SpotifyPlayer] Playback transferred to HangTheDJ device');
+    console.log("[SpotifyPlayer] Playback transferred to HangTheDJ device");
   }
 
   onStateChange(handler) {
@@ -208,11 +208,11 @@ class SpotifyPlayerServiceImpl {
   }
 
   async searchTrack(query) {
-    if (!this.authService) throw new Error('Auth service not available');
+    if (!this.authService) throw new Error("Auth service not available");
     const token = await this.authService.getAccessToken();
-    if (!token) throw new Error('No access token available');
+    if (!token) throw new Error("No access token available");
 
-    const params = new URLSearchParams({ q: query, type: 'track', limit: '1' });
+    const params = new URLSearchParams({ q: query, type: "track", limit: "1" });
     const res = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -229,7 +229,7 @@ class SpotifyPlayerServiceImpl {
     return {
       id: item.id,
       title: item.name,
-      artistName: item.artists?.map((a) => a.name).join(', ') ?? 'Unknown',
+      artistName: item.artists?.map((a) => a.name).join(", ") ?? "Unknown",
       albumName: item.album?.name,
       durationMs: item.duration_ms,
       artworkUrl: item.album?.images?.[0]?.url,
@@ -238,11 +238,11 @@ class SpotifyPlayerServiceImpl {
   }
 
   async searchTracks(query, limit = 5) {
-    if (!this.authService) throw new Error('Auth service not available');
+    if (!this.authService) throw new Error("Auth service not available");
     const token = await this.authService.getAccessToken();
-    if (!token) throw new Error('No access token available');
+    if (!token) throw new Error("No access token available");
 
-    const params = new URLSearchParams({ q: query, type: 'track', limit: String(limit) });
+    const params = new URLSearchParams({ q: query, type: "track", limit: String(limit) });
     const res = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -256,7 +256,7 @@ class SpotifyPlayerServiceImpl {
     return items.map((item) => ({
       id: item.id,
       title: item.name,
-      artistName: item.artists?.map((a) => a.name).join(', ') ?? 'Unknown',
+      artistName: item.artists?.map((a) => a.name).join(", ") ?? "Unknown",
       albumName: item.album?.name,
       durationMs: item.duration_ms,
       artworkUrl: item.album?.images?.[0]?.url,
@@ -265,13 +265,13 @@ class SpotifyPlayerServiceImpl {
   }
 
   async addToQueue(trackUri) {
-    if (!this.authService) throw new Error('Auth service not available');
+    if (!this.authService) throw new Error("Auth service not available");
     const token = await this.authService.getAccessToken();
-    if (!token) throw new Error('No access token available');
+    if (!token) throw new Error("No access token available");
 
     const params = new URLSearchParams({ uri: trackUri });
     const res = await fetch(`https://api.spotify.com/v1/me/player/queue?${params.toString()}`, {
-      method: 'POST',
+      method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -317,7 +317,7 @@ class SpotifyPlayerServiceImpl {
     return {
       id: sdkTrack.id,
       title: sdkTrack.name,
-      artistName: sdkTrack.artists.map((a) => a.name).join(', '),
+      artistName: sdkTrack.artists.map((a) => a.name).join(", "),
       albumName: sdkTrack.album.name,
       durationMs: sdkTrack.duration_ms,
       artworkUrl: sdkTrack.album.images[0]?.url,
@@ -331,11 +331,11 @@ class SpotifyPlayerServiceImpl {
         resolve();
         return;
       }
-      const script = document.createElement('script');
+      const script = document.createElement("script");
       script.src = SDK_SCRIPT_URL;
       script.async = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Spotify Web Playback SDK — check network or ad blocker'));
+      script.onerror = () => reject(new Error("Failed to load Spotify Web Playback SDK — check network or ad blocker"));
       document.body.appendChild(script);
     });
   }
