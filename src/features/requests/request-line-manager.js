@@ -5,24 +5,10 @@
 import { saveRequest, getRequestsBySession, updateRequestStatus } from '../storage/storage-service.js';
 import { generateUUID } from '../../utils.js';
 
-const REQUEST_COOLDOWN_MS = 60_000;
-const MAX_PENDING = 10;
-
 class RequestLineManagerImpl {
-  constructor() {
-    this.lastSubmitTime = 0;
-  }
+  constructor() {}
 
   async submit(sessionId, submission) {
-    const now = Date.now();
-    if (!submission.playNow && now - this.lastSubmitTime < REQUEST_COOLDOWN_MS) {
-      throw new Error('Please wait a moment before submitting another request.');
-    }
-
-    const pending = await this.getPending(sessionId);
-    if (pending.length >= MAX_PENDING) {
-      throw new Error('The request queue is full. Try again after the DJ catches up.');
-    }
 
     // Strip all angle bracket characters to prevent HTML injection.
     // This removes both complete tags (<script>) and stray < or > characters.
@@ -52,7 +38,6 @@ class RequestLineManagerImpl {
     }
 
     await saveRequest(request);
-    this.lastSubmitTime = now;
     return request;
   }
 

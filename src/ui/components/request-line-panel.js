@@ -257,7 +257,7 @@ export class RequestLinePanel {
             (r) => `
           <li class="request-item status-${r.status}">
             <span class="request-artist"${r.status === 'fulfilled' ? ' style="text-decoration:line-through;opacity:0.6"' : ''}>${escapeHtml(r.artistName)}${r.trackName ? ' — ' + escapeHtml(r.trackName) : ''}</span>
-            <span class="request-status muted">${r.status}</span>
+            <span class="request-status muted">${r.status === 'fulfilled' ? 'Played' : r.status}</span>
           </li>`,
           )
           .join('')}

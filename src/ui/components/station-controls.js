@@ -33,7 +33,7 @@ export class StationControls {
 
     this.userMusicVolume = 1.0;
     this.isFading = false;
-    this.shuffleEnabled = true;
+    this.shuffleEnabled = false;
 
     this.pendingTransition = null;
     this.pendingTransitionForTrackId = null;
@@ -62,6 +62,7 @@ export class StationControls {
     appStore.subscribe("spotify", () => this._render());
     appStore.subscribe("settings", () => this._render());
     appStore.subscribe("persona", () => this._render());
+    appStore.subscribe("playback", () => this._updatePlayPause());
 
     this.services.coordinator.onVolumeChange((vol) => {
       const slider = this.element.querySelector("#vol-music");
@@ -121,17 +122,24 @@ export class StationControls {
         ${
           !session.isRunning
             ? `
-        <label class="shuffle-toggle">
-          <input type="checkbox" id="chk-shuffle" ${this.shuffleEnabled ? "checked" : ""} />
-          <span>🔀 Shuffle</span>
-        </label>`
+        <div class="field toggle-field" style="margin-bottom:0">
+          <label class="toggle-switch">
+            <input type="checkbox" id="chk-shuffle" ${this.shuffleEnabled ? "checked" : ""} />
+            <span class="toggle-slider"></span>
+          </label>
+          <div class="toggle-label-group">
+            <span class="toggle-label-text">DJ's choice</span>
+            <span class="muted" style="font-size:0.75rem">Shuffle the playlist</span>
+          </div>
+        </div>`
             : ""
         }
         ${
           this.isStopping
             ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Signing off…</button>`
             : session.isRunning
-              ? `<button class="danger" id="btn-stop">Sign Off</button>
+              ? `<button class="playback-toggle" id="btn-play-pause" title="${appStore.get("playback").isPlaying ? "Pause" : "Play"}">${appStore.get("playback").isPlaying ? "⏸" : "▶"}</button>
+                 <button class="danger" id="btn-stop">Sign Off</button>
                ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" style="margin-left:0.5rem;background:#555;color:#ff0;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px dashed #ff0;border-radius:4px;cursor:pointer" title="Skip to ~35s before end of track">⏩ Skip to banter</button>` : ""}`
               : `<button id="btn-start" ${!spotify.isConnected || !this.musicPicker.getSelection() ? "disabled" : ""}>Tune In</button>`
         }
@@ -158,6 +166,14 @@ export class StationControls {
     this.element.querySelector("#btn-debug-skip")?.addEventListener("click", () => void this._debugSkipToBanter());
     this.element.querySelector("#chk-shuffle")?.addEventListener("change", (e) => {
       this.shuffleEnabled = e.target.checked;
+    });
+    this.element.querySelector("#btn-play-pause")?.addEventListener("click", () => {
+      const pb = appStore.get("playback");
+      if (pb.isPlaying) {
+        this.services.spotifyPlayer.pause().catch(console.error);
+      } else {
+        this.services.spotifyPlayer.resume().catch(console.error);
+      }
     });
 
     // Mount the music picker when off-air
@@ -1003,6 +1019,14 @@ export class StationControls {
         }
       }, intervalMs);
     });
+  }
+
+  _updatePlayPause() {
+    const btn = this.element.querySelector("#btn-play-pause");
+    if (!btn) return;
+    const isPlaying = appStore.get("playback").isPlaying;
+    btn.textContent = isPlaying ? "⏸" : "▶";
+    btn.title = isPlaying ? "Pause" : "Play";
   }
 
   _logPromptsIfDebug(result) {

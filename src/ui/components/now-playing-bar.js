@@ -58,9 +58,6 @@ export class NowPlayingBar {
             <span class="track-time muted">${formatTime(progressSec)} / ${formatTime(durationSec)}  ·  ${remainingSec}s left</span>
           </div>
         </div>
-        <button class="playback-toggle" id="btn-play-pause" title="${playback.isPlaying ? "Pause" : "Play"}" ${!appStore.get("session").isRunning ? "disabled" : ""}>
-          ${playback.isPlaying ? "⏸" : "▶"}
-        </button>
         <div class="now-playing-meta">
           <div class="now-playing-label">♫ Now playing</div>
           <div class="debug-info muted">
@@ -71,14 +68,7 @@ export class NowPlayingBar {
       </div>
     `;
 
-    this.element.querySelector("#btn-play-pause")?.addEventListener("click", () => {
-      if (!this.services?.spotifyPlayer) return;
-      if (playback.isPlaying) {
-        this.services.spotifyPlayer.pause().catch(console.error);
-      } else {
-        this.services.spotifyPlayer.resume().catch(console.error);
-      }
-    });
+
   }
 }
 
