@@ -9,6 +9,7 @@ import {
   getAllPersonas,
   deletePersona,
 } from '../storage/storage-service.js';
+import { generateUUID } from '../../utils.js';
 
 // ── Preset personas ───────────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ class PersonaServiceImpl {
         const now = new Date().toISOString();
         await savePersona({
           ...preset,
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           createdAt: now,
           updatedAt: now,
         });
@@ -100,7 +101,7 @@ class PersonaServiceImpl {
     const now = new Date().toISOString();
     const persona = {
       ...data,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       createdAt: now,
       updatedAt: now,
     };

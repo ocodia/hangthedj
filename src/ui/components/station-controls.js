@@ -16,6 +16,7 @@ import {
   clearDjActivity,
 } from '../../stores/app-store.js';
 import { saveSettings, loadSettings, saveSession } from '../../features/storage/storage-service.js';
+import { generateUUID } from '../../utils.js';
 
 const MOODS = [
   { value: 'freestyle', label: 'Freestyle' },
@@ -247,7 +248,7 @@ export class StationControls {
 
     this.sessionMood = mood;
     this.sessionMoodPrompt = moodPrompt;
-    this.sessionId = crypto.randomUUID();
+    this.sessionId = generateUUID();
     const now = new Date().toISOString();
 
     const session = {

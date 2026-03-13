@@ -3,6 +3,7 @@
  */
 
 import { saveRequest, getRequestsBySession, updateRequestStatus } from '../storage/storage-service.js';
+import { generateUUID } from '../../utils.js';
 
 const REQUEST_COOLDOWN_MS = 60_000;
 const MAX_PENDING = 10;
@@ -23,15 +24,16 @@ class RequestLineManagerImpl {
       throw new Error('The request queue is full. Try again after the DJ catches up.');
     }
 
+    // Strip all angle bracket characters to prevent HTML injection.
+    // This removes both complete tags (<script>) and stray < or > characters.
     const sanitize = (s) =>
       s
-        ?.replace(/<[^>]*>/g, '')
-        .replace(/[<>]/g, '')
+        ?.replace(/[<>]/g, '')
         .trim()
         .slice(0, 200);
 
     const request = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       sessionId,
       callerName: sanitize(submission.callerName)?.slice(0, 50),
       artistName: sanitize(submission.artistName)?.slice(0, 100) ?? '',

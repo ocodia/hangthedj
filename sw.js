@@ -8,6 +8,7 @@ const APP_SHELL = [
   './src/styles/global.css',
   './src/styles/components.css',
   './src/main.js',
+  './src/utils.js',
   './src/app/app-shell.js',
   './src/stores/app-store.js',
   './src/features/storage/indexeddb.js',
