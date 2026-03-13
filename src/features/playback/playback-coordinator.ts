@@ -34,6 +34,8 @@ export interface PlaybackCoordinator {
   onStateChange(handler: (state: PlaybackCoordinatorState) => void): () => void;
   /** Register a callback that fires whenever the coordinator changes the music volume (during fades). */
   onVolumeChange(handler: (volume: number) => void): () => void;
+  /** Set the target volume the coordinator should restore to after a transition. */
+  setTargetVolume(volume: number): void;
 }
 
 class PlaybackCoordinatorImpl implements PlaybackCoordinator {
@@ -46,6 +48,10 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
     private spotifyPlayer: SpotifyPlayerService,
     private djAudioPlayer: DJAudioPlayer,
   ) {}
+
+  setTargetVolume(volume: number): void {
+    this.originalVolume = volume;
+  }
 
   startMonitoring(): void {
     this.setState("monitoring");
@@ -70,17 +76,14 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
     }
 
     try {
-      // Remember the current volume so we can restore it
-      try {
-        this.originalVolume = await this.spotifyPlayer.getVolume();
-      } catch {
-        this.originalVolume = 0.8;
-      }
+      // Use the user's target volume (set via setTargetVolume) as the restore target.
+      // Only fall back to reading Spotify if no target was explicitly set.
+      const fadeBackTo = this.originalVolume;
 
       // ── Phase 1: Fade out ──────────────────────────────────────────────
       this.setState("fadingOut");
       try {
-        await this.fadeVolume(this.originalVolume, DUCKED_VOLUME, FADE_DURATION_MS, FADE_STEPS);
+        await this.fadeVolume(fadeBackTo, DUCKED_VOLUME, FADE_DURATION_MS, FADE_STEPS);
       } catch (err) {
         console.warn("[PlaybackCoordinator] Fade-out failed, continuing anyway:", err);
       }
@@ -97,12 +100,12 @@ class PlaybackCoordinatorImpl implements PlaybackCoordinator {
       // ── Phase 3: Restore volume on the already-playing track ──────────
       this.setState("resumingPlayback");
 
-      // Fade volume back up to the original level
+      // Fade volume back up to the user's target level
       try {
-        await this.fadeVolume(DUCKED_VOLUME, this.originalVolume, FADE_IN_DURATION_MS, FADE_IN_STEPS);
+        await this.fadeVolume(DUCKED_VOLUME, fadeBackTo, FADE_IN_DURATION_MS, FADE_IN_STEPS);
       } catch (err) {
         console.warn("[PlaybackCoordinator] Fade-in failed, snapping volume:", err);
-        await this.spotifyPlayer.setVolume(this.originalVolume).catch(() => {});
+        await this.spotifyPlayer.setVolume(fadeBackTo).catch(() => {});
       }
 
       this.setState("monitoring");

@@ -60,6 +60,11 @@ export class StationControls {
 
   private isStopping = false;
 
+  /** The volume the user has chosen via the slider — all fades restore to this. */
+  private userMusicVolume = 0.8;
+  /** True while an automated fade is in progress (disables the music slider). */
+  private isFading = false;
+
   // Pre-generated banter: generated at ~30s remaining, played at ~5s remaining
   private pendingTransition: { objectUrl: string; segmentType: string; banterText: string; trackInfo: string } | null = null;
   private pendingTransitionForTrackId: string | null = null;
@@ -86,8 +91,20 @@ export class StationControls {
       const slider = this.element.querySelector<HTMLInputElement>("#vol-music");
       const label = this.element.querySelector<HTMLSpanElement>("#vol-music-value");
       const pct = Math.round(vol * 100);
-      if (slider) slider.value = String(pct);
+      if (slider) {
+        slider.value = String(pct);
+        slider.style.setProperty("--fill", `${pct}%`);
+        slider.disabled = true;
+      }
       if (label) label.textContent = `${pct}%`;
+    });
+
+    // Re-enable the slider when the coordinator returns to monitoring
+    this.services.coordinator.onStateChange((state) => {
+      if (state === "monitoring" || state === "idle") {
+        const slider = this.element.querySelector<HTMLInputElement>("#vol-music");
+        if (slider) slider.disabled = false;
+      }
     });
   }
 
@@ -172,22 +189,35 @@ export class StationControls {
     const djValue = this.element.querySelector<HTMLSpanElement>("#vol-dj-value");
 
     // Restore current volumes into the sliders
-    this.services.spotifyPlayer.getVolume().then((v) => {
-      if (musicSlider) musicSlider.value = String(Math.round(v * 100));
-      if (musicValue) musicValue.textContent = `${Math.round(v * 100)}%`;
-    }).catch(() => {});
+    {
+      const pct = Math.round(this.userMusicVolume * 100);
+      if (musicSlider) {
+        musicSlider.value = String(pct);
+        musicSlider.style.setProperty("--fill", `${pct}%`);
+        musicSlider.disabled = this.isFading;
+      }
+      if (musicValue) musicValue.textContent = `${pct}%`;
+    }
     const djVol = this.services.djPlayer.getVolume();
-    if (djSlider) djSlider.value = String(Math.round(djVol * 100));
+    if (djSlider) {
+      djSlider.value = String(Math.round(djVol * 100));
+      djSlider.style.setProperty("--fill", `${Math.round(djVol * 100)}%`);
+    }
     if (djValue) djValue.textContent = `${Math.round(djVol * 100)}%`;
 
     musicSlider?.addEventListener("input", (e) => {
       const val = Number((e.target as HTMLInputElement).value);
       if (musicValue) musicValue.textContent = `${val}%`;
-      this.services.spotifyPlayer.setVolume(val / 100).catch(() => {});
+      (e.target as HTMLInputElement).style.setProperty("--fill", `${val}%`);
+      const vol = val / 100;
+      this.userMusicVolume = vol;
+      this.services.coordinator.setTargetVolume(vol);
+      this.services.spotifyPlayer.setVolume(vol).catch(() => {});
     });
     djSlider?.addEventListener("input", (e) => {
       const val = Number((e.target as HTMLInputElement).value);
       if (djValue) djValue.textContent = `${val}%`;
+      (e.target as HTMLInputElement).style.setProperty("--fill", `${val}%`);
       this.services.djPlayer.setVolume(val / 100);
     });
 
@@ -285,7 +315,10 @@ export class StationControls {
     addDjActivityEntry({ type: "system", text: "Session starting… DJ is warming up 🎤", debug: true });
     await this.playDjIntro(mood, moodPrompt);
 
-    // 3. Transfer playback to start the first track
+    // 3. Set volume to 0 so the music fades in after transfer
+    await this.services.spotifyPlayer.setVolume(0).catch(() => {});
+
+    // 4. Transfer playback to start the first track
     try {
       await this.services.spotifyPlayer.transferPlayback();
       addDjActivityEntry({ type: "system", text: "Music started — DJ is on the air!", debug: true });
@@ -294,7 +327,13 @@ export class StationControls {
       addDjActivityEntry({ type: "error", text: "Could not start Spotify playback. Try playing a track in Spotify first." });
     }
 
-    // 4. Subscribe to track changes (for logging + recent tracks + call-in fulfillment)
+    // 5. Fade music in to the user's chosen volume
+    await this.fadeSpotifyVolume(0, this.userMusicVolume, 2_000);
+
+    // Sync the coordinator's target volume
+    this.services.coordinator.setTargetVolume(this.userMusicVolume);
+
+    // 6. Subscribe to track changes (for logging + recent tracks + call-in fulfillment)
     this.unsubscribeTrackChange = this.services.spotifyPlayer.onTrackChange((track) => {
       if (!track || !this.sessionId) return;
       updatePlaybackState({ currentTrack: track });
@@ -321,7 +360,7 @@ export class StationControls {
       this.pendingTransitionForTrackId = null;
     });
 
-    // 5. Subscribe to request state changes to detect new call-ins
+    // 7. Subscribe to request state changes to detect new call-ins
     this.unsubscribeRequests = appStore.subscribe("requests", (reqState) => {
       if (!this.sessionId) return;
       const newRequests = reqState.requests.filter((r) => r.status === "pending" && !r.spokenAcknowledgement && !r.spotifyUri);
@@ -333,7 +372,7 @@ export class StationControls {
       }
     });
 
-    // 6. Start position monitor (polls every 1 s)
+    // 8. Start position monitor (polls every 1 s)
     this.startPositionMonitor();
   }
 
@@ -401,10 +440,8 @@ export class StationControls {
       return;
     }
 
-    let savedVolume = 0.8;
+    const savedVolume = this.userMusicVolume;
     try {
-      savedVolume = await this.services.spotifyPlayer.getVolume().catch(() => 0.8);
-
       updateAiState({ isGenerating: true, lastError: null });
       addDjActivityEntry({ type: "system", text: "🧠 Generating sign-off banter…", debug: true });
 
@@ -850,7 +887,7 @@ export class StationControls {
     const personaState = appStore.get("persona");
     if (!personaState.activePersona) return;
 
-    let savedVolume = 0.8;
+    const savedVolume = this.userMusicVolume;
     try {
       updateAiState({ isGenerating: true, lastError: null });
       addDjActivityEntry({ type: "system", text: "🧠 Generating call-in banter…", debug: true });
@@ -888,11 +925,6 @@ export class StationControls {
       addDjActivityEntry({ type: "dj", text: `📞🎤 ${banterResult.text}` });
 
       // ── Fade music out completely ──
-      try {
-        savedVolume = await this.services.spotifyPlayer.getVolume();
-      } catch {
-        savedVolume = 0.8;
-      }
       await this.fadeSpotifyVolume(savedVolume, 0, 2_000);
 
       // ── Play the DJ clip over silence ──
@@ -931,6 +963,10 @@ export class StationControls {
         debug: true,
       });
     }
+    this.isFading = true;
+    const slider = this.element.querySelector<HTMLInputElement>("#vol-music");
+    if (slider) slider.disabled = true;
+
     const steps = 12;
     const intervalMs = durationMs / steps;
     const delta = (to - from) / steps;
@@ -941,16 +977,22 @@ export class StationControls {
         const vol = step >= steps ? to : from + delta * step;
         this.services.spotifyPlayer.setVolume(vol).catch(() => {});
         // Update the music volume slider to reflect the fade
-        const slider = this.element.querySelector<HTMLInputElement>("#vol-music");
+        const sl = this.element.querySelector<HTMLInputElement>("#vol-music");
         const label = this.element.querySelector<HTMLSpanElement>("#vol-music-value");
         const pct = Math.round(vol * 100);
-        if (slider) slider.value = String(pct);
+        if (sl) {
+          sl.value = String(pct);
+          sl.style.setProperty("--fill", `${pct}%`);
+        }
         if (label) label.textContent = `${pct}%`;
         if (debugMode && step % 4 === 0) {
           addDjActivityEntry({ type: "system", text: `🔊 Volume: ${Math.round(vol * 100)}%`, debug: true });
         }
         if (step >= steps) {
           clearInterval(timer);
+          this.isFading = false;
+          const s = this.element.querySelector<HTMLInputElement>("#vol-music");
+          if (s) s.disabled = false;
           resolve();
         }
       }, intervalMs);

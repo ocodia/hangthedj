@@ -274,7 +274,7 @@
 .volume-sliders {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
   margin: 0.75rem 0;
 }
 
@@ -292,32 +292,74 @@
 
 .volume-slider {
   flex: 1;
-  height: 4px;
+  height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: #333;
-  border-radius: 2px;
+  background: linear-gradient(to right, var(--color-accent) var(--fill, 80%), #333 var(--fill, 80%));
+  border-radius: 3px;
   outline: none;
   cursor: pointer;
+  transition: height 0.15s ease, filter 0.2s ease;
+}
+
+.volume-slider:hover {
+  height: 8px;
+  filter: brightness(1.1);
+}
+
+.volume-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: saturate(0.5);
 }
 
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--color-accent);
+  box-shadow: 0 0 4px rgba(29, 185, 84, 0.5);
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.volume-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(29, 185, 84, 0.7);
+}
+
+.volume-slider:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .volume-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--color-accent);
   border: none;
+  box-shadow: 0 0 4px rgba(29, 185, 84, 0.5);
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.volume-slider:hover::-moz-range-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(29, 185, 84, 0.7);
+}
+
+.volume-slider:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.volume-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+  height: 6px;
 }
 
 .volume-value {
@@ -325,6 +367,7 @@
   color: var(--color-text-muted);
   min-width: 2.5rem;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .dj-status {
