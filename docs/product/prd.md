@@ -386,7 +386,6 @@ The system shall:
 - accept listener requests
 - store request details and status client-side
 - classify requests as accepted, rejected, or fulfilled
-- support "play right now" requests with immediate Spotify search and queue
 - let the DJ acknowledge requests later in banter
 - allow accepted requests to influence future programming
 - maintain consistency between what the DJ says and what the station later does

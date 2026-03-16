@@ -62,7 +62,6 @@ Stores listener call-in requests.
 | status                | string  | "pending" / "accepted" / "rejected" / "fulfilled" |
 | spokenAcknowledgement | boolean | Whether the DJ has spoken about this              |
 | promisedForLater      | boolean | Whether the DJ implied it would come later        |
-| playNow               | boolean | Whether the user requested immediate playback     |
 | spotifyUri            | string? | Spotify URI if track was found                    |
 | spotifyTrackTitle     | string? | Resolved track title from Spotify search          |
 

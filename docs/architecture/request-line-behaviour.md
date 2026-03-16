@@ -21,7 +21,6 @@ interface ListenerRequest {
   status: RequestStatus;
   spokenAcknowledgement: boolean; // Has the DJ spoken about this?
   promisedForLater: boolean; // Did the DJ imply it's coming?
-  playNow: boolean; // Did the user request immediate playback?
   spotifyUri?: string; // Spotify URI if track was found via search
   spotifyTrackTitle?: string; // Resolved track title from Spotify
 }
@@ -39,16 +38,6 @@ pending → accepted   (DJ will play this artist / acknowledge the request)
 pending → rejected   (DJ declines in character)
 accepted → fulfilled (Artist/track has been introduced or played)
 ```
-
-### "Play right now" requests
-
-When a user submits a request with the "Play right now" toggle enabled:
-
-1. The app immediately searches Spotify for the requested track
-2. If found: the track is added to the Spotify queue, status becomes `accepted`, and immediate banter is generated
-3. If not found: the request is rejected
-
----
 
 ## UI behaviour
 
@@ -136,7 +125,6 @@ The request line panel provides:
 - Spotify track search with debounce (350ms), grouped results
 - Selected track display with artwork
 - Optional message field
-- "Play right now" toggle
 - Submit button
 - Recent request history (5 most recent, sorted by time)
 

@@ -88,10 +88,6 @@ User fills in request form
       └─ rejected → DJ declines in character
                     Status → "rejected"
 
-Request with "Play right now" flag:
-  ├─ Spotify search for track immediately
-  ├─ If found: add to Spotify queue, generate immediate banter
-  ├─ If not found: reject request
 ```
 
 ---

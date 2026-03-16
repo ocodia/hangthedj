@@ -49,16 +49,6 @@ export class RequestLinePanel {
           <label for="message">Message (optional)</label>
           <textarea id="message" placeholder="Say something to the DJ..." maxlength="200" rows="2"></textarea>
         </div>
-        <div class="field toggle-field">
-          <label class="toggle-switch">
-            <input type="checkbox" id="play-now" />
-            <span class="toggle-slider"></span>
-          </label>
-          <div class="toggle-label-group">
-            <span class="toggle-label-text">Play right now</span>
-            <span class="muted" style="font-size:0.75rem">DJ will interrupt and announce it</span>
-          </div>
-        </div>
         <div id="request-feedback" class="request-feedback" style="display:none"></div>
         <button type="submit" id="btn-submit-request">Send Request</button>
       </form>
@@ -202,7 +192,6 @@ export class RequestLinePanel {
       artistName: this.selectedTrack ? this.selectedTrack.artistName : rawQuery,
       trackName: this.selectedTrack ? this.selectedTrack.title : undefined,
       message: this._getValue("message"),
-      playNow: this.element.querySelector("#play-now")?.checked ?? false,
     };
 
     const btn = this.element.querySelector("#btn-submit-request");
@@ -217,7 +206,6 @@ export class RequestLinePanel {
       feedback.textContent = `Request for ${request.artistName}${request.trackName ? " — " + request.trackName : ""} is in the queue!`;
 
       this.element.querySelector("#message").value = "";
-      this.element.querySelector("#play-now").checked = false;
       this._clearSelection();
 
       const all = await this.services.requestManager.getAll(session.activeSession.id);

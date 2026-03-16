@@ -25,7 +25,6 @@ class RequestLineManagerImpl {
       status: "pending",
       spokenAcknowledgement: false,
       promisedForLater: false,
-      playNow: submission.playNow ?? false,
     };
 
     if (!request.artistName) {

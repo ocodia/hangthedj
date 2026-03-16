@@ -298,7 +298,6 @@ interface ListenerRequest {
   status: "pending" | "accepted" | "rejected" | "fulfilled";
   spokenAcknowledgement: boolean;
   promisedForLater: boolean;
-  playNow: boolean;
   spotifyUri?: string;
   spotifyTrackTitle?: string;
 }
@@ -662,7 +661,6 @@ interface ListenerRequest {
   status: "pending" | "accepted" | "rejected" | "fulfilled";
   spokenAcknowledgement: boolean;
   promisedForLater: boolean;
-  playNow: boolean;
   spotifyUri?: string;
   spotifyTrackTitle?: string;
 }

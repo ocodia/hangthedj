@@ -854,7 +854,7 @@ export class StationControls {
 
       addDjActivityEntry({
         type: "call-in",
-        text: `📞 ${callerLabel} called in requesting: "${query}"${request.playNow ? " ⚡ RIGHT NOW" : ""}`,
+        text: `📞 ${callerLabel} called in requesting: "${query}"`,
       });
       addDjActivityEntry({ type: "system", text: `🔍 Searching Spotify for "${query}"…`, debug: true });
 
@@ -874,17 +874,12 @@ export class StationControls {
 
         this._refreshRequestStore();
 
-        if (request.playNow) {
-          const summary = `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} Play it right now! Announce the caller and hype the track.`;
-          await this._playCallInBanterNow("requestAcknowledgement", [summary], true);
-        } else {
-          const summary = `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's coming up next — hype the request without referencing the current track.`;
-          const banterText = await this._generateCallInBanterText("requestAcknowledgement", [summary], false);
-          if (banterText) {
-            addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
-          }
-          this.processedCallInSummaries.push(summary);
+        const summary = `${callerLabel} called in and requested "${foundTrack.title}" by ${foundTrack.artistName}.${messageSnippet} It's coming up next — hype the request without referencing the current track.`;
+        const banterText = await this._generateCallInBanterText("requestAcknowledgement", [summary], false);
+        if (banterText) {
+          addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
         }
+        this.processedCallInSummaries.push(summary);
       } else {
         addDjActivityEntry({
           type: "call-in",
@@ -896,17 +891,12 @@ export class StationControls {
 
         this._refreshRequestStore();
 
-        if (request.playNow) {
-          const summary = `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`;
-          await this._playCallInBanterNow("requestRefusal", [summary], false);
-        } else {
-          const summary = `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`;
-          const banterText = await this._generateCallInBanterText("requestRefusal", [summary], false);
-          if (banterText) {
-            addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
-          }
-          this.processedCallInSummaries.push(summary);
+        const summary = `${callerLabel} called in and requested "${query}" but it couldn't be found on Spotify. Let them down gently.`;
+        const banterText = await this._generateCallInBanterText("requestRefusal", [summary], false);
+        if (banterText) {
+          addDjActivityEntry({ type: "dj", text: `📞💬 ${banterText}` });
         }
+        this.processedCallInSummaries.push(summary);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -940,71 +930,6 @@ export class StationControls {
     } catch (err) {
       console.warn("[CallIn] Text-only banter generation failed:", err);
       return null;
-    }
-  }
-
-  async _playCallInBanterNow(segmentType, requestSummary, skipToNext) {
-    const { banterEngine, voiceEngine } = this.services;
-    if (!banterEngine || !voiceEngine) return;
-
-    const personaState = appStore.get("persona");
-    if (!personaState.activePersona) return;
-
-    const savedVolume = this.userMusicVolume;
-    try {
-      updateAiState({ isGenerating: true, lastError: null });
-      addDjActivityEntry({ type: "system", text: "🧠 Generating call-in banter…", debug: true });
-
-      const constraints = this._buildBanterConstraints(personaState.activePersona, segmentType, {
-        banterSize: "short",
-        maxSeconds: 10,
-      });
-      const banterResult = await banterEngine.generate({
-        persona: personaState.activePersona,
-        segmentType,
-        currentTrack: appStore.get("playback").currentTrack,
-        recentTracks: appStore.get("playback").recentTracks,
-        requestSummary,
-        recentBanterSummaries: [],
-        constraints,
-      });
-
-      this._logPromptsIfDebug(banterResult);
-
-      updateAiState({ isGenerating: false, isRendering: true });
-      addDjActivityEntry({ type: "system", text: "🎤 Rendering call-in voice…", debug: true });
-
-      const voiceResult = await voiceEngine.render({
-        text: banterResult.text,
-        voice: personaState.activePersona.voice,
-        elevenLabsVoiceId: personaState.activePersona.elevenLabsVoiceId,
-        speechRate: personaState.activePersona.speechRate,
-        format: "mp3",
-      });
-
-      updateAiState({ isRendering: false });
-
-      addDjActivityEntry({ type: "dj", text: `📞🎤 ${banterResult.text}` });
-
-      await this._fadeSpotifyVolume(savedVolume, 0, 2_000);
-      await this.services.djPlayer.play(voiceResult.objectUrl);
-
-      if (skipToNext) {
-        try {
-          await this.services.spotifyPlayer.nextTrack();
-        } catch (err) {
-          console.warn("[CallIn] Skip to next track failed:", err);
-        }
-      }
-
-      await this._fadeSpotifyVolume(0, savedVolume, 1_500);
-      this.services.scheduler.recordInsertion(segmentType);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[CallIn] Banter failed:", msg);
-      updateAiState({ isGenerating: false, isRendering: false, lastError: msg });
-      addDjActivityEntry({ type: "error", text: `Call-in banter failed: ${msg}` });
-      await this.services.spotifyPlayer.setVolume(savedVolume).catch(() => {});
     }
   }
 
