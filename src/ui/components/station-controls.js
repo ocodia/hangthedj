@@ -3,7 +3,7 @@
  *
  * Two-phase banter system:
  *   Phase 1: < 30s remaining → pre-generate banter + TTS
- *   Phase 2: < 10s remaining → crossfade transition
+ *   Phase 2: within configured outro window → execute transition
  */
 
 import {
@@ -21,6 +21,7 @@ import { PersonaEditor } from "./persona-editor.js";
 import { StationMusicPicker } from "./station-music-picker.js";
 
 const WORDS_PER_SECOND = 2.5;
+const OVERLAY_TOLERANCE_SECONDS = 0.5;
 
 export class StationControls {
   constructor(services) {
@@ -260,12 +261,7 @@ export class StationControls {
   async _handleTrackChange(track) {
     if (!track || !this.sessionId) return;
 
-    const preserveTransitionState = this.services.coordinator.isCarryingTransitionAcrossBoundary();
     updatePlaybackState({ currentTrack: track });
-
-    if (preserveTransitionState) {
-      await this.services.coordinator.handleTrackBoundary();
-    }
 
     this.services.scheduler.recordTrackChange();
 
@@ -282,10 +278,8 @@ export class StationControls {
     });
 
     this.banterEvaluatedForTrackId = null;
-    if (!preserveTransitionState) {
-      this.pendingTransition = null;
-      this.pendingTransitionForTrackId = null;
-    }
+    this.pendingTransition = null;
+    this.pendingTransitionForTrackId = null;
   }
 
   async _debugSkipToBanter() {
@@ -698,19 +692,24 @@ export class StationControls {
 
       addDjActivityEntry({
         type: "dj",
-        text: `🎤 ${transition.banterText}${transition.trackInfo} [${transition.banterSize}, ${transition.transitionMode}, ${transition.plannedDurationSeconds.toFixed(1)}s]`,
+        text:
+          `🎤 ${transition.banterText}${transition.trackInfo} ` +
+          `[${transition.banterSize}, ${transition.transitionMode}, ${transition.plannedDurationSeconds.toFixed(1)}s, ` +
+          `${transition.durationComparison}]`,
       });
-
-      await this.services.coordinator.executeTransition(transition);
-      this.services.scheduler.recordInsertion(transition.segmentType);
 
       const statusEl = this.element.querySelector("#dj-status");
       if (statusEl) {
         statusEl.textContent =
-          transition.transitionMode === "hold-next-track"
-            ? "DJ is holding the next track…"
-            : "DJ is monitoring the station…";
+          transition.transitionMode === "pause-and-duck"
+            ? "DJ is pausing music for banter…"
+            : "DJ is talking over ducked music…";
       }
+
+      await this.services.coordinator.executeTransition(transition);
+      this.services.scheduler.recordInsertion(transition.segmentType);
+
+      if (statusEl) statusEl.textContent = "DJ is monitoring the station…";
     }
 
     // Phase 3: Process call-in queue
@@ -811,7 +810,9 @@ export class StationControls {
         type: "system",
         text:
           `✅ Banter ready (${banterResult.wordCount} words, ${transitionPlan.plannedDurationSeconds.toFixed(1)}s) ` +
-          `— ${transitionPlan.transitionMode} / ${transitionPlan.banterSize}`,
+          `— ${transitionPlan.transitionMode} / ${transitionPlan.banterSize} ` +
+          `(safe overlay ${transitionPlan.safeOverlaySeconds.toFixed(1)}s, tolerance ${transitionPlan.overlayToleranceSeconds.toFixed(1)}s, ` +
+          `${transitionPlan.durationComparison})`,
         debug: true,
       });
 
@@ -824,6 +825,8 @@ export class StationControls {
         transitionMode: transitionPlan.transitionMode,
         plannedDurationSeconds: transitionPlan.plannedDurationSeconds,
         safeOverlaySeconds: transitionPlan.safeOverlaySeconds,
+        overlayToleranceSeconds: transitionPlan.overlayToleranceSeconds,
+        durationComparison: transitionPlan.durationComparison,
         triggerRemainingMs: transitionPlan.triggerRemainingMs,
       };
       this.pendingTransitionForTrackId = currentTrackId;
@@ -956,14 +959,21 @@ export class StationControls {
     const settings = appStore.get("settings").audioTransition;
     const safeOverlaySeconds = settings.currentTrackOutroDipSeconds + settings.nextTrackIntroDipSeconds;
     const plannedDurationSeconds = actualDurationSeconds ?? estimatedDurationSeconds;
-    const transitionMode =
-      segmentType === "transition" && banterSize !== "short" ? "hold-next-track" : "overlay";
+    const overlayBudgetSeconds = safeOverlaySeconds + OVERLAY_TOLERANCE_SECONDS;
+    const overflowSeconds = plannedDurationSeconds - overlayBudgetSeconds;
+    const transitionMode = plannedDurationSeconds > overlayBudgetSeconds ? "pause-and-duck" : "overlay";
+    const durationComparison =
+      overflowSeconds > 0
+        ? `over by ${overflowSeconds.toFixed(1)}s`
+        : `under by ${Math.abs(overflowSeconds).toFixed(1)}s`;
 
     return {
       banterSize,
       transitionMode,
       plannedDurationSeconds,
       safeOverlaySeconds,
+      overlayToleranceSeconds: OVERLAY_TOLERANCE_SECONDS,
+      durationComparison,
       triggerRemainingMs: settings.currentTrackOutroDipSeconds * 1000,
     };
   }

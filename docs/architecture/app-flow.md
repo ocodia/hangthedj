@@ -54,11 +54,12 @@ PlayerReady
       │   ├─ VoiceEngine renders audio (cached for Phase 2)
       │   └─ Store pre-generated clip for upcoming transition
       │
-      ├─ Phase 2 (< 10s remaining):
+      ├─ Phase 2 (within configured outro window):
       │   └─ PlaybackCoordinator.executeTransition()
-      │       ├─ Fade music volume to 20% (3s, 15 steps)
-      │       ├─ Play DJ audio clip over ducked music
-      │       └─ Fade music volume back to original (1.5s, 8 steps)
+      │       ├─ Choose `overlay` or `pause-and-duck` from clip duration vs safe duck window
+      │       ├─ Fade music volume down
+      │       ├─ Play DJ audio clip over ducked music or paused playback
+      │       └─ Resume/fade music back to original volume
       │
       └─ Phase 3: Process pending call-in queue
           ├─ Search Spotify for requested tracks
@@ -100,24 +101,21 @@ States:
   monitoring
   fadingOut
   playingDjClip
-  holdingNextTrack
   resumingPlayback
 
 Transitions:
   idle → monitoring                    (session started)
   monitoring → fadingOut               (transition triggered with DJ clip ready)
-  fadingOut → playingDjClip            (music ducked to 20% volume)
-  playingDjClip → holdingNextTrack     (long-form banter reaches track boundary)
+  fadingOut → playingDjClip            (music ducked or faded to 0, DJ clip starts)
   playingDjClip → resumingPlayback     (DJ clip completed or errored)
-  holdingNextTrack → resumingPlayback  (DJ clip completed, next track resumes)
   resumingPlayback → monitoring        (music volume restored)
   monitoring → idle                    (session ended)
 ```
 
 Note: The coordinator now supports two transition modes:
 
-- `overlay`: music stays playing at reduced volume while the DJ speaks, including across the track boundary if needed
-- `hold-next-track`: the current song finishes naturally, then the next song is paused at the boundary until the DJ clip finishes
+- `overlay`: music stays playing at reduced volume while the DJ speaks
+- `pause-and-duck`: music fades to silence and Spotify is paused before the DJ clip starts, then resumes with a fade-in afterward
 
 ### Crossfade parameters
 

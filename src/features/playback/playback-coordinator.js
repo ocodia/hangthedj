@@ -2,7 +2,7 @@
  * PlaybackCoordinator: orchestrates DJ transitions over Spotify playback.
  *
  * State machine:
- *   idle → monitoring → fadingOut → playingDjClip → holdingNextTrack? → resumingPlayback → monitoring
+ *   idle → monitoring → fadingOut → playingDjClip → resumingPlayback → monitoring
  */
 
 const FADE_DURATION_MS = 3_000;
@@ -46,9 +46,8 @@ class PlaybackCoordinatorImpl {
       id: crypto.randomUUID(),
       mode: transition.transitionMode ?? "overlay",
       fadeBackTo: this.originalVolume,
-      duckedVolume: DUCKED_VOLUME,
-      waitingForBoundary: (transition.transitionMode ?? "overlay") === "hold-next-track",
-      pausedNextTrack: false,
+      duckedVolume: (transition.transitionMode ?? "overlay") === "pause-and-duck" ? 0 : DUCKED_VOLUME,
+      pausedSpotify: false,
     };
 
     this.activeTransition = activeTransition;
@@ -61,19 +60,22 @@ class PlaybackCoordinatorImpl {
 
       this._setState("playingDjClip");
 
-      if (activeTransition.mode === "hold-next-track") {
-        void this.djAudioPlayer
-          .play(transition.objectUrl)
-          .then(() => this._finishHoldTransition(activeTransition))
-          .catch((err) => {
-            console.warn("[PlaybackCoordinator] DJ clip playback failed:", err);
-            return this._finishHoldTransition(activeTransition);
-          });
-        return;
+      if (activeTransition.mode === "pause-and-duck") {
+        try {
+          await this.spotifyPlayer.pause();
+          activeTransition.pausedSpotify = true;
+        } catch (err) {
+          console.warn("[PlaybackCoordinator] Failed to pause Spotify before DJ clip:", err);
+        }
       }
 
-      await this.djAudioPlayer.play(transition.objectUrl);
-      await this._finishTransition(activeTransition, false);
+      try {
+        await this.djAudioPlayer.play(transition.objectUrl);
+      } catch (err) {
+        console.warn("[PlaybackCoordinator] DJ clip playback failed:", err);
+      }
+
+      await this._finishTransition(activeTransition);
     } catch (err) {
       console.error("[PlaybackCoordinator] Unexpected error in transition:", err);
       if (this.activeTransition === activeTransition) {
@@ -84,35 +86,8 @@ class PlaybackCoordinatorImpl {
     }
   }
 
-  async handleTrackBoundary() {
-    const activeTransition = this.activeTransition;
-    if (!activeTransition || activeTransition.mode !== "hold-next-track") {
-      return false;
-    }
-
-    activeTransition.waitingForBoundary = false;
-
-    if (activeTransition.pausedNextTrack) {
-      return true;
-    }
-
-    this._setState("holdingNextTrack");
-    try {
-      await this.spotifyPlayer.pause();
-      activeTransition.pausedNextTrack = true;
-    } catch (err) {
-      console.warn("[PlaybackCoordinator] Failed to pause next track:", err);
-    }
-
-    return true;
-  }
-
   isCarryingTransitionAcrossBoundary() {
-    return !!(
-      this.activeTransition &&
-      this.activeTransition.mode === "hold-next-track" &&
-      (this.activeTransition.waitingForBoundary || this.activeTransition.pausedNextTrack)
-    );
+    return false;
   }
 
   getState() {
@@ -133,24 +108,16 @@ class PlaybackCoordinatorImpl {
     };
   }
 
-  async _finishHoldTransition(activeTransition) {
-    if (this.activeTransition !== activeTransition) return;
-    activeTransition.waitingForBoundary = false;
-    await this._finishTransition(activeTransition, activeTransition.pausedNextTrack);
-  }
-
-  async _finishTransition(activeTransition, resumePlayback) {
+  async _finishTransition(activeTransition) {
     if (this.activeTransition !== activeTransition) return;
 
     this._setState("resumingPlayback");
     try {
-      if (resumePlayback) {
-        await this.spotifyPlayer.setVolume(activeTransition.fadeBackTo).catch(() => {});
+      if (activeTransition.pausedSpotify) {
+        await this.spotifyPlayer.setVolume(0).catch(() => {});
         await this.spotifyPlayer.resume().catch(() => {});
-        this.volumeHandlers.forEach((handler) => handler(activeTransition.fadeBackTo));
-      } else {
-        await this._fadeVolume(activeTransition.duckedVolume, activeTransition.fadeBackTo, FADE_IN_DURATION_MS, FADE_IN_STEPS);
       }
+      await this._fadeVolume(activeTransition.duckedVolume, activeTransition.fadeBackTo, FADE_IN_DURATION_MS, FADE_IN_STEPS);
     } finally {
       if (this.activeTransition === activeTransition) {
         this.activeTransition = null;
