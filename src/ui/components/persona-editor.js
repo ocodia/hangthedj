@@ -8,6 +8,11 @@ import { saveSettings, loadSettings } from "../../features/storage/storage-servi
 import { searchElevenLabsVoices } from "../../features/voice/voice-engine.js";
 
 const OPENAI_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+const DEFAULT_BANTER_WORD_CAPS = Object.freeze({
+  short: 25,
+  medium: 45,
+  long: 80,
+});
 
 export class PersonaEditor {
   constructor(services, callbacks) {
@@ -31,6 +36,7 @@ export class PersonaEditor {
       this._persona = {
         name: "",
         systemPrompt: "Keep responses 30–50 words.",
+        banterWordCaps: { ...DEFAULT_BANTER_WORD_CAPS },
         elevenLabsVoiceId: "",
         voice: "nova",
         speechRate: 1.0,
@@ -75,6 +81,24 @@ export class PersonaEditor {
             placeholder="Describe the DJ's personality, tone, delivery style…"
             style="width:100%;resize:vertical;font-size:0.85rem">${escapeHtml(p.systemPrompt)}</textarea>
           <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">This is the character description sent to the AI. Include tone, delivery style, and word count guidance.</p>
+        </div>
+        <div class="field">
+          <label>Banter Max Words</label>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.5rem">
+            <div>
+              <label for="pe-banter-short" style="font-size:0.75rem;color:#aaa">Short</label>
+              <input type="number" id="pe-banter-short" min="1" max="200" value="${p.banterWordCaps?.short ?? DEFAULT_BANTER_WORD_CAPS.short}" />
+            </div>
+            <div>
+              <label for="pe-banter-medium" style="font-size:0.75rem;color:#aaa">Medium</label>
+              <input type="number" id="pe-banter-medium" min="1" max="250" value="${p.banterWordCaps?.medium ?? DEFAULT_BANTER_WORD_CAPS.medium}" />
+            </div>
+            <div>
+              <label for="pe-banter-long" style="font-size:0.75rem;color:#aaa">Long</label>
+              <input type="number" id="pe-banter-long" min="1" max="300" value="${p.banterWordCaps?.long ?? DEFAULT_BANTER_WORD_CAPS.long}" />
+            </div>
+          </div>
+          <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">Used as hard caps when the DJ auto-picks short, medium, or long banter.</p>
         </div>
         <div class="field">
           <label for="pe-voice">OpenAI Voice (fallback)</label>
@@ -208,6 +232,9 @@ export class PersonaEditor {
     const name = this.element.querySelector("#pe-name")?.value?.trim();
     const systemPrompt = this.element.querySelector("#pe-system-prompt")?.value?.trim();
     const voice = this.element.querySelector("#pe-voice")?.value || "nova";
+    const shortWords = parseInt(this.element.querySelector("#pe-banter-short")?.value, 10);
+    const mediumWords = parseInt(this.element.querySelector("#pe-banter-medium")?.value, 10);
+    const longWords = parseInt(this.element.querySelector("#pe-banter-long")?.value, 10);
     const elevenLabsVoiceId = this.element.querySelector("#pe-elevenlabs-voice-id")?.value?.trim() || "";
     const speechRate = parseFloat(this.element.querySelector("#pe-speech-rate")?.value) || 1.0;
 
@@ -219,6 +246,20 @@ export class PersonaEditor {
       alert("Please enter a system prompt.");
       return;
     }
+    if (![shortWords, mediumWords, longWords].every((value) => Number.isInteger(value) && value > 0)) {
+      alert("Please enter valid positive max-word values for short, medium, and long banter.");
+      return;
+    }
+    if (!(shortWords <= mediumWords && mediumWords <= longWords)) {
+      alert("Banter word caps must be in ascending order: short <= medium <= long.");
+      return;
+    }
+
+    const banterWordCaps = {
+      short: shortWords,
+      medium: mediumWords,
+      long: longWords,
+    };
 
     try {
       let saved;
@@ -226,6 +267,7 @@ export class PersonaEditor {
         saved = await this.services.personaService.save({
           name,
           systemPrompt,
+          banterWordCaps,
           voice,
           elevenLabsVoiceId,
           speechRate,
@@ -236,6 +278,7 @@ export class PersonaEditor {
           ...this._persona,
           name,
           systemPrompt,
+          banterWordCaps,
           voice,
           elevenLabsVoiceId,
           speechRate,

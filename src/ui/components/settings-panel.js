@@ -89,6 +89,30 @@ export class SettingsPanel {
             <span class="muted" style="font-size:0.75rem">Show all activity details in DJ log</span>
           </div>
         </div>
+        <div class="field">
+          <label for="current-track-outro-dip">Current track outro dip (seconds)</label>
+          <input
+            type="number"
+            id="current-track-outro-dip"
+            min="1"
+            max="15"
+            step="1"
+            value="${appStore.get("settings").audioTransition.currentTrackOutroDipSeconds}"
+          />
+          <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">How many seconds before a song ends are safe for ducked banter.</p>
+        </div>
+        <div class="field">
+          <label for="next-track-intro-dip">Next track intro dip (seconds)</label>
+          <input
+            type="number"
+            id="next-track-intro-dip"
+            min="1"
+            max="15"
+            step="1"
+            value="${appStore.get("settings").audioTransition.nextTrackIntroDipSeconds}"
+          />
+          <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">How many seconds at the start of the next song can stay ducked before music should fully return.</p>
+        </div>
         <hr style="border-color:#333;margin:1rem 0" />
         <h4>Spotify Setup</h4>
         ${
@@ -168,10 +192,32 @@ export class SettingsPanel {
       updateSettings(updated);
     });
 
+    this.element.querySelector("#current-track-outro-dip")?.addEventListener("change", (e) => {
+      this._saveAudioTransitionSetting("currentTrackOutroDipSeconds", e.target.value);
+    });
+
+    this.element.querySelector("#next-track-intro-dip")?.addEventListener("change", (e) => {
+      this._saveAudioTransitionSetting("nextTrackIntroDipSeconds", e.target.value);
+    });
+
     this.element.querySelector("#btn-clear-spotify-id")?.addEventListener("click", () => {
       if (confirm("Clear your Spotify Client ID? You will need to log in again.")) {
         this.callbacks.onSpotifyClientIdClear();
       }
     });
+  }
+
+  _saveAudioTransitionSetting(key, rawValue) {
+    const value = Math.max(1, Math.min(15, Number.parseInt(rawValue, 10) || 5));
+    const current = loadSettings();
+    const updated = {
+      ...current,
+      audioTransition: {
+        ...current.audioTransition,
+        [key]: value,
+      },
+    };
+    saveSettings(updated);
+    updateSettings(updated);
   }
 }

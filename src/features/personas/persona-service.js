@@ -8,6 +8,11 @@ import { generateUUID } from "../../utils.js";
 import { DEFAULT_PERSONA_MANIFEST } from "./default-persona-manifest.js";
 
 const LEGACY_PRESET_NAMES = new Set(["DJ Pirate", "DJ Classic Rock"]);
+export const DEFAULT_BANTER_WORD_CAPS = Object.freeze({
+  short: 25,
+  medium: 45,
+  long: 80,
+});
 
 // ── PersonaService ────────────────────────────────────────────────────────────
 
@@ -40,30 +45,31 @@ class PersonaServiceImpl {
 
   async getAll() {
     const personas = await getAllPersonas();
-    return sortPersonas(personas);
+    return sortPersonas(personas.map((persona) => normalizePersona(persona)));
   }
 
   async getById(id) {
-    return getPersona(id);
+    const persona = await getPersona(id);
+    return persona ? normalizePersona(persona) : null;
   }
 
   async save(data) {
     const now = new Date().toISOString();
-    const persona = {
+    const persona = normalizePersona({
       ...data,
       id: generateUUID(),
       createdAt: now,
       updatedAt: now,
-    };
+    });
     await savePersona(persona);
     return persona;
   }
 
   async update(persona) {
-    const updated = {
+    const updated = normalizePersona({
       ...persona,
       updatedAt: new Date().toISOString(),
-    };
+    });
     await savePersona(updated);
     return updated;
   }
@@ -113,6 +119,7 @@ async function loadDefaultPersonas() {
         presetKey: attributes.personaId || entry.fallbackId,
         name: attributes.name || entry.fallbackName,
         systemPrompt: body.trim(),
+        banterWordCaps: parseBanterWordCaps(attributes),
         elevenLabsVoiceId: attributes.elevenLabsVoiceId || "",
         voice: attributes.voice || "nova",
         speechRate: parseSpeechRate(attributes.speechRate),
@@ -168,6 +175,31 @@ function stripQuotes(value) {
 function parseSpeechRate(value) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 1.0;
+}
+
+function parseBanterWordCaps(attributes) {
+  return {
+    short: parsePositiveInteger(attributes.banterShortMaxWords, DEFAULT_BANTER_WORD_CAPS.short),
+    medium: parsePositiveInteger(attributes.banterMediumMaxWords, DEFAULT_BANTER_WORD_CAPS.medium),
+    long: parsePositiveInteger(attributes.banterLongMaxWords, DEFAULT_BANTER_WORD_CAPS.long),
+  };
+}
+
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function normalizePersona(persona) {
+  const inputCaps = persona?.banterWordCaps ?? {};
+  const short = parsePositiveInteger(inputCaps.short, DEFAULT_BANTER_WORD_CAPS.short);
+  const medium = Math.max(short, parsePositiveInteger(inputCaps.medium, DEFAULT_BANTER_WORD_CAPS.medium));
+  const long = Math.max(medium, parsePositiveInteger(inputCaps.long, DEFAULT_BANTER_WORD_CAPS.long));
+
+  return {
+    ...persona,
+    banterWordCaps: { short, medium, long },
+  };
 }
 
 function sortPersonas(personas) {

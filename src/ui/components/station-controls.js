@@ -20,6 +20,8 @@ import { generateUUID } from "../../utils.js";
 import { PersonaEditor } from "./persona-editor.js";
 import { StationMusicPicker } from "./station-music-picker.js";
 
+const WORDS_PER_SECOND = 2.5;
+
 export class StationControls {
   constructor(services) {
     this.services = services;
@@ -77,6 +79,7 @@ export class StationControls {
     });
 
     this.services.coordinator.onStateChange((state) => {
+      updatePlaybackState({ coordinator: state });
       if (state === "monitoring" || state === "idle") {
         const slider = this.element.querySelector("#vol-music");
         if (slider) slider.disabled = false;
@@ -254,6 +257,37 @@ export class StationControls {
 
   // ── Session lifecycle ───────────────────────────────────────────────────────
 
+  async _handleTrackChange(track) {
+    if (!track || !this.sessionId) return;
+
+    const preserveTransitionState = this.services.coordinator.isCarryingTransitionAcrossBoundary();
+    updatePlaybackState({ currentTrack: track });
+
+    if (preserveTransitionState) {
+      await this.services.coordinator.handleTrackBoundary();
+    }
+
+    this.services.scheduler.recordTrackChange();
+
+    addDjActivityEntry({
+      type: "track",
+      text: `🎵 Now playing: "${track.title}" by ${track.artistName}`,
+    });
+
+    this._checkCallInFulfillment(track);
+
+    const current = appStore.get("playback");
+    updatePlaybackState({
+      recentTracks: [track, ...current.recentTracks].slice(0, 10),
+    });
+
+    this.banterEvaluatedForTrackId = null;
+    if (!preserveTransitionState) {
+      this.pendingTransition = null;
+      this.pendingTransitionForTrackId = null;
+    }
+  }
+
   async _debugSkipToBanter() {
     const pos = await this.services.spotifyPlayer.fetchCurrentPosition();
     if (!pos) {
@@ -317,25 +351,7 @@ export class StationControls {
 
     // 3. Subscribe to track changes (before transfer so the first track event is captured)
     this.unsubscribeTrackChange = this.services.spotifyPlayer.onTrackChange((track) => {
-      if (!track || !this.sessionId) return;
-      updatePlaybackState({ currentTrack: track });
-      this.services.scheduler.recordTrackChange();
-
-      addDjActivityEntry({
-        type: "track",
-        text: `🎵 Now playing: "${track.title}" by ${track.artistName}`,
-      });
-
-      this._checkCallInFulfillment(track);
-
-      const current = appStore.get("playback");
-      updatePlaybackState({
-        recentTracks: [track, ...current.recentTracks].slice(0, 10),
-      });
-
-      this.banterEvaluatedForTrackId = null;
-      this.pendingTransition = null;
-      this.pendingTransitionForTrackId = null;
+      void this._handleTrackChange(track);
     });
 
     // 4. Start playback with the selected music context
@@ -448,11 +464,7 @@ export class StationControls {
         recentTracks: appStore.get("playback").recentTracks,
         requestSummary: [],
         recentBanterSummaries: [],
-        constraints: {
-          maxWords: 60,
-          maxSeconds: 25,
-          familySafe: appStore.get("settings").schedulerConfig.familySafe,
-        },
+        constraints: this._buildBanterConstraints(personaState.activePersona, "signOff"),
       });
 
       this._logPromptsIfDebug(banterResult);
@@ -506,11 +518,7 @@ export class StationControls {
         recentTracks: [],
         requestSummary: [],
         recentBanterSummaries: [],
-        constraints: {
-          maxWords: 60,
-          maxSeconds: 25,
-          familySafe: appStore.get("settings").schedulerConfig.familySafe,
-        },
+        constraints: this._buildBanterConstraints(personaState.activePersona, "stationIdent"),
       });
 
       this._logPromptsIfDebug(banterResult);
@@ -586,11 +594,7 @@ export class StationControls {
         recentTracks: playbackState.recentTracks ?? [],
         requestSummary: [],
         recentBanterSummaries: [],
-        constraints: {
-          maxWords: 60,
-          maxSeconds: 25,
-          familySafe: appStore.get("settings").schedulerConfig.familySafe,
-        },
+        constraints: this._buildBanterConstraints(personaState.activePersona, "stationIdent"),
       });
 
       this._logPromptsIfDebug(banterResult);
@@ -675,26 +679,38 @@ export class StationControls {
       }
     }
 
-    // Phase 2: Execute crossfade when < 10s remaining and clip is ready
+    const transitionTriggerMs = this.pendingTransition?.triggerRemainingMs ?? 10_000;
+
+    // Phase 2: Execute transition in the configured outro window when clip is ready
     if (
-      remaining <= 10_000 &&
+      remaining <= transitionTriggerMs &&
       remaining > 0 &&
       this.pendingTransition &&
       this.pendingTransitionForTrackId === currentTrackId &&
       this.services.coordinator.getState() === "monitoring"
     ) {
-      console.log(`[PositionMonitor] 🎙️ Phase 2: ${Math.round(remaining / 1000)}s remaining — executing transition`);
+      console.log(
+        `[PositionMonitor] 🎙️ Phase 2: ${Math.round(remaining / 1000)}s remaining — executing ${this.pendingTransition.transitionMode} transition`,
+      );
       const transition = this.pendingTransition;
       this.pendingTransition = null;
       this.pendingTransitionForTrackId = null;
 
-      addDjActivityEntry({ type: "dj", text: `🎤 ${transition.banterText}${transition.trackInfo}` });
+      addDjActivityEntry({
+        type: "dj",
+        text: `🎤 ${transition.banterText}${transition.trackInfo} [${transition.banterSize}, ${transition.transitionMode}, ${transition.plannedDurationSeconds.toFixed(1)}s]`,
+      });
 
-      await this.services.coordinator.executeTransition(transition.objectUrl);
+      await this.services.coordinator.executeTransition(transition);
       this.services.scheduler.recordInsertion(transition.segmentType);
 
       const statusEl = this.element.querySelector("#dj-status");
-      if (statusEl) statusEl.textContent = "DJ is monitoring the station…";
+      if (statusEl) {
+        statusEl.textContent =
+          transition.transitionMode === "hold-next-track"
+            ? "DJ is holding the next track…"
+            : "DJ is monitoring the station…";
+      }
     }
 
     // Phase 3: Process call-in queue
@@ -748,6 +764,12 @@ export class StationControls {
       if (statusEl) statusEl.textContent = "DJ is thinking…";
       addDjActivityEntry({ type: "system", text: "🧠 Generating banter script…", debug: true });
 
+      const constraints = this._buildBanterConstraints(personaState.activePersona, decision.segmentType);
+      addDjActivityEntry({
+        type: "system",
+        text: `🎚️ Banter mode selected: ${constraints.banterSize} (${constraints.maxWords} words max)`,
+        debug: true,
+      });
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType: decision.segmentType,
@@ -756,11 +778,7 @@ export class StationControls {
         recentTracks: appStore.get("playback").recentTracks,
         requestSummary: [...this.processedCallInSummaries],
         recentBanterSummaries: [],
-        constraints: {
-          maxWords: 60,
-          maxSeconds: 20,
-          familySafe: appStore.get("settings").schedulerConfig.familySafe,
-        },
+        constraints,
       });
 
       this.processedCallInSummaries = [];
@@ -783,14 +801,30 @@ export class StationControls {
       updateAiState({ isRendering: false });
 
       const trackInfo = currentTrack ? ` [after "${currentTrack.title}" by ${currentTrack.artistName}]` : "";
-      const wordCount = banterResult.text.split(/\s+/).length;
-      addDjActivityEntry({ type: "system", text: `✅ Banter ready (${wordCount} words) — waiting for track to end…`, debug: true });
+      const transitionPlan = this._planTransition({
+        segmentType: decision.segmentType,
+        banterSize: constraints.banterSize,
+        estimatedDurationSeconds: banterResult.estimatedDurationSeconds,
+        actualDurationSeconds: voiceResult.durationSeconds,
+      });
+      addDjActivityEntry({
+        type: "system",
+        text:
+          `✅ Banter ready (${banterResult.wordCount} words, ${transitionPlan.plannedDurationSeconds.toFixed(1)}s) ` +
+          `— ${transitionPlan.transitionMode} / ${transitionPlan.banterSize}`,
+        debug: true,
+      });
 
       this.pendingTransition = {
         objectUrl: voiceResult.objectUrl,
         segmentType: decision.segmentType,
         banterText: banterResult.text,
         trackInfo,
+        banterSize: transitionPlan.banterSize,
+        transitionMode: transitionPlan.transitionMode,
+        plannedDurationSeconds: transitionPlan.plannedDurationSeconds,
+        safeOverlaySeconds: transitionPlan.safeOverlaySeconds,
+        triggerRemainingMs: transitionPlan.triggerRemainingMs,
       };
       this.pendingTransitionForTrackId = currentTrackId;
 
@@ -891,6 +925,7 @@ export class StationControls {
     if (!personaState.activePersona) return null;
 
     try {
+      const constraints = this._buildBanterConstraints(personaState.activePersona, segmentType, { banterSize: "short" });
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType,
@@ -898,11 +933,7 @@ export class StationControls {
         recentTracks: includeCurrentTrack ? appStore.get("playback").recentTracks : [],
         requestSummary,
         recentBanterSummaries: [],
-        constraints: {
-          maxWords: 60,
-          maxSeconds: 25,
-          familySafe: appStore.get("settings").schedulerConfig.familySafe,
-        },
+        constraints,
       });
       this._logPromptsIfDebug(banterResult);
       return banterResult.text;
@@ -924,6 +955,10 @@ export class StationControls {
       updateAiState({ isGenerating: true, lastError: null });
       addDjActivityEntry({ type: "system", text: "🧠 Generating call-in banter…", debug: true });
 
+      const constraints = this._buildBanterConstraints(personaState.activePersona, segmentType, {
+        banterSize: "short",
+        maxSeconds: 10,
+      });
       const banterResult = await banterEngine.generate({
         persona: personaState.activePersona,
         segmentType,
@@ -931,11 +966,7 @@ export class StationControls {
         recentTracks: appStore.get("playback").recentTracks,
         requestSummary,
         recentBanterSummaries: [],
-        constraints: {
-          maxWords: 25,
-          maxSeconds: 10,
-          familySafe: appStore.get("settings").schedulerConfig.familySafe,
-        },
+        constraints,
       });
 
       this._logPromptsIfDebug(banterResult);
@@ -975,6 +1006,41 @@ export class StationControls {
       addDjActivityEntry({ type: "error", text: `Call-in banter failed: ${msg}` });
       await this.services.spotifyPlayer.setVolume(savedVolume).catch(() => {});
     }
+  }
+
+  _buildBanterConstraints(persona, segmentType, options = {}) {
+    const banterSize = options.banterSize ?? this._chooseBanterSize(segmentType);
+    const maxWords = options.maxWords ?? persona.banterWordCaps?.[banterSize] ?? 45;
+    const maxSeconds = options.maxSeconds ?? Math.max(8, Math.ceil(maxWords / WORDS_PER_SECOND));
+
+    return {
+      banterSize,
+      maxWords,
+      maxSeconds,
+      familySafe: appStore.get("settings").schedulerConfig.familySafe,
+    };
+  }
+
+  _chooseBanterSize(segmentType) {
+    const sizes = ["short", "medium", "long"];
+    const randomIndex = Math.floor(Math.random() * sizes.length);
+    return sizes[randomIndex];
+  }
+
+  _planTransition({ segmentType, banterSize, estimatedDurationSeconds, actualDurationSeconds }) {
+    const settings = appStore.get("settings").audioTransition;
+    const safeOverlaySeconds = settings.currentTrackOutroDipSeconds + settings.nextTrackIntroDipSeconds;
+    const plannedDurationSeconds = actualDurationSeconds ?? estimatedDurationSeconds;
+    const transitionMode =
+      segmentType === "transition" && banterSize !== "short" ? "hold-next-track" : "overlay";
+
+    return {
+      banterSize,
+      transitionMode,
+      plannedDurationSeconds,
+      safeOverlaySeconds,
+      triggerRemainingMs: settings.currentTrackOutroDipSeconds * 1000,
+    };
   }
 
   _fadeSpotifyVolume(from, to, durationMs) {

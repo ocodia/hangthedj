@@ -84,7 +84,9 @@ function buildUserPrompt(req) {
       break;
   }
 
-  parts.push(`Keep it under ${req.constraints.maxWords} words. Spoken audio only — no stage directions.`);
+  parts.push(
+    `Make this a ${req.constraints.banterSize} banter segment. Keep it under ${req.constraints.maxWords} words and about ${req.constraints.maxSeconds} seconds max. Spoken audio only — no stage directions.`,
+  );
 
   if (req.constraints.factualityMode === "grounded") {
     parts.push("Keep factual claims accurate — don't invent facts about artists.");
@@ -134,10 +136,10 @@ class BanterEngineImpl {
 
     const wordCount = text.split(/\s+/).length;
     const estimatedDurationSeconds = Math.round(wordCount / WORDS_PER_SECOND);
-    const tags = [req.segmentType].filter(Boolean);
+    const tags = [req.segmentType, req.constraints.banterSize].filter(Boolean);
     const fingerprint = makeFingerprint(text);
 
-    return { text, estimatedDurationSeconds, tags, fingerprint, systemPrompt, userPrompt };
+    return { text, wordCount, estimatedDurationSeconds, tags, fingerprint, systemPrompt, userPrompt };
   }
 }
 

@@ -31,6 +31,7 @@ Stores DJ persona definitions.
 | id                | string  | Primary key (UUID)             |
 | name              | string  | Display name                   |
 | systemPrompt      | string  | Free-form persona prompt text  |
+| banterWordCaps    | object  | `{ short, medium, long }` caps |
 | elevenLabsVoiceId | string  | Optional ElevenLabs voice ID   |
 | voice             | string  | OpenAI TTS voice ID (fallback) |
 | speechRate        | number  | 0.5–1.5, default 1.0           |
@@ -170,6 +171,13 @@ Indexes:
 ---
 
 ## Schema evolution
+
+Settings persisted in localStorage include:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| schedulerConfig | object | Frequency, request behaviour, family-safe mode |
+| audioTransition | object | `currentTrackOutroDipSeconds`, `nextTrackIntroDipSeconds` |
 
 When the schema version increments:
 

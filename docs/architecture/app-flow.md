@@ -104,18 +104,24 @@ States:
   monitoring
   fadingOut
   playingDjClip
+  holdingNextTrack
   resumingPlayback
 
 Transitions:
   idle → monitoring                    (session started)
   monitoring → fadingOut               (transition triggered with DJ clip ready)
   fadingOut → playingDjClip            (music ducked to 20% volume)
+  playingDjClip → holdingNextTrack     (long-form banter reaches track boundary)
   playingDjClip → resumingPlayback     (DJ clip completed or errored)
+  holdingNextTrack → resumingPlayback  (DJ clip completed, next track resumes)
   resumingPlayback → monitoring        (music volume restored)
   monitoring → idle                    (session ended)
 ```
 
-Note: The coordinator uses **volume ducking** (crossfade) rather than full pause/resume. Music continues playing at reduced volume while the DJ speaks, then fades back to the original volume.
+Note: The coordinator now supports two transition modes:
+
+- `overlay`: music stays playing at reduced volume while the DJ speaks, including across the track boundary if needed
+- `hold-next-track`: the current song finishes naturally, then the next song is paused at the boundary until the DJ clip finishes
 
 ### Crossfade parameters
 

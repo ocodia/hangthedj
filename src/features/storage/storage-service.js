@@ -23,6 +23,10 @@ export const DEFAULT_SETTINGS = {
   activePersonaId: null,
   defaultMood: "freestyle",
   schedulerConfig: { djFrequency: "every", requestBehaviour: "responsive", familySafe: true },
+  audioTransition: {
+    currentTrackOutroDipSeconds: 5,
+    nextTrackIntroDipSeconds: 5,
+  },
   keyWarningDismissed: false,
   installPromptShown: false,
   debugMode: false,
@@ -133,17 +137,32 @@ export function clearSpotifyTokens() {
 // ── App settings (localStorage) ───────────────────────────────────────────────
 
 export function saveSettings(settings) {
-  localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(normalizeSettings(settings)));
 }
 
 export function loadSettings() {
   const raw = localStorage.getItem(LS_SETTINGS);
-  if (!raw) return { ...DEFAULT_SETTINGS };
+  if (!raw) return normalizeSettings(DEFAULT_SETTINGS);
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    return normalizeSettings(JSON.parse(raw));
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return normalizeSettings(DEFAULT_SETTINGS);
   }
+}
+
+export function normalizeSettings(settings = {}) {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    schedulerConfig: {
+      ...DEFAULT_SETTINGS.schedulerConfig,
+      ...(settings.schedulerConfig ?? {}),
+    },
+    audioTransition: {
+      ...DEFAULT_SETTINGS.audioTransition,
+      ...(settings.audioTransition ?? {}),
+    },
+  };
 }
 
 // ── Personas (IndexedDB) ──────────────────────────────────────────────────────

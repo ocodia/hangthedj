@@ -16,6 +16,32 @@ async function hashString(str) {
 
 const objectUrlCache = new Map();
 
+function measureAudioDuration(objectUrl) {
+  return new Promise((resolve) => {
+    const audio = new Audio();
+    audio.preload = "metadata";
+
+    const cleanup = () => {
+      audio.onloadedmetadata = null;
+      audio.onerror = null;
+      audio.src = "";
+    };
+
+    audio.onloadedmetadata = () => {
+      const durationSeconds = Number.isFinite(audio.duration) ? audio.duration : null;
+      cleanup();
+      resolve(durationSeconds);
+    };
+
+    audio.onerror = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    audio.src = objectUrl;
+  });
+}
+
 class VoiceEngineImpl {
   constructor(apiKey, elevenLabsKey = null) {
     this.apiKey = apiKey;
@@ -41,7 +67,8 @@ class VoiceEngineImpl {
     const blob = useEL ? await this._renderElevenLabs(req) : await this._renderOpenAI(req);
 
     const objectUrl = URL.createObjectURL(blob);
-    const result = { blob, objectUrl, cacheKey };
+    const durationSeconds = await measureAudioDuration(objectUrl);
+    const result = { blob, objectUrl, cacheKey, durationSeconds };
     objectUrlCache.set(cacheKey, result);
     return result;
   }

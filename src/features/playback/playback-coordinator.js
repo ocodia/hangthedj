@@ -1,8 +1,8 @@
 /**
- * PlaybackCoordinator: orchestrates a crossfade transition from music to DJ clip.
+ * PlaybackCoordinator: orchestrates DJ transitions over Spotify playback.
  *
  * State machine:
- *   idle → monitoring → fadingOut → playingDjClip → resumingPlayback → monitoring
+ *   idle → monitoring → fadingOut → playingDjClip → holdingNextTrack? → resumingPlayback → monitoring
  */
 
 const FADE_DURATION_MS = 3_000;
@@ -19,6 +19,7 @@ class PlaybackCoordinatorImpl {
     this.originalVolume = 1.0;
     this.spotifyPlayer = spotifyPlayer;
     this.djAudioPlayer = djAudioPlayer;
+    this.activeTransition = null;
   }
 
   setTargetVolume(volume) {
@@ -30,50 +31,88 @@ class PlaybackCoordinatorImpl {
   }
 
   stopMonitoring() {
+    this.activeTransition = null;
     this.djAudioPlayer.stop();
     this.spotifyPlayer.setVolume(this.originalVolume).catch(() => {});
     this._setState("idle");
   }
 
-  async executeTransition(djClipUrl) {
+  async executeTransition(transition) {
     if (this._state !== "monitoring") {
       return;
     }
 
+    const activeTransition = {
+      id: crypto.randomUUID(),
+      mode: transition.transitionMode ?? "overlay",
+      fadeBackTo: this.originalVolume,
+      duckedVolume: DUCKED_VOLUME,
+      waitingForBoundary: (transition.transitionMode ?? "overlay") === "hold-next-track",
+      pausedNextTrack: false,
+    };
+
+    this.activeTransition = activeTransition;
+
     try {
-      const fadeBackTo = this.originalVolume;
-
-      // Phase 1: Fade out
       this._setState("fadingOut");
-      try {
-        await this._fadeVolume(fadeBackTo, DUCKED_VOLUME, FADE_DURATION_MS, FADE_STEPS);
-      } catch (err) {
-        console.warn("[PlaybackCoordinator] Fade-out failed, continuing anyway:", err);
-      }
+      await this._fadeVolume(activeTransition.fadeBackTo, activeTransition.duckedVolume, FADE_DURATION_MS, FADE_STEPS);
 
-      // Phase 2: Play DJ clip over the ducked music
+      if (this.activeTransition !== activeTransition) return;
+
       this._setState("playingDjClip");
-      try {
-        await this.djAudioPlayer.play(djClipUrl);
-      } catch (err) {
-        console.warn("[PlaybackCoordinator] DJ clip playback failed:", err);
+
+      if (activeTransition.mode === "hold-next-track") {
+        void this.djAudioPlayer
+          .play(transition.objectUrl)
+          .then(() => this._finishHoldTransition(activeTransition))
+          .catch((err) => {
+            console.warn("[PlaybackCoordinator] DJ clip playback failed:", err);
+            return this._finishHoldTransition(activeTransition);
+          });
+        return;
       }
 
-      // Phase 3: Restore volume
-      this._setState("resumingPlayback");
-      try {
-        await this._fadeVolume(DUCKED_VOLUME, fadeBackTo, FADE_IN_DURATION_MS, FADE_IN_STEPS);
-      } catch (err) {
-        console.warn("[PlaybackCoordinator] Fade-in failed, snapping volume:", err);
-        await this.spotifyPlayer.setVolume(fadeBackTo).catch(() => {});
-      }
-
-      this._setState("monitoring");
+      await this.djAudioPlayer.play(transition.objectUrl);
+      await this._finishTransition(activeTransition, false);
     } catch (err) {
       console.error("[PlaybackCoordinator] Unexpected error in transition:", err);
-      await this.spotifyPlayer.setVolume(this.originalVolume).catch(() => {});
+      if (this.activeTransition === activeTransition) {
+        await this.spotifyPlayer.setVolume(this.originalVolume).catch(() => {});
+        this.activeTransition = null;
+      }
       this._setState("monitoring");
     }
+  }
+
+  async handleTrackBoundary() {
+    const activeTransition = this.activeTransition;
+    if (!activeTransition || activeTransition.mode !== "hold-next-track") {
+      return false;
+    }
+
+    activeTransition.waitingForBoundary = false;
+
+    if (activeTransition.pausedNextTrack) {
+      return true;
+    }
+
+    this._setState("holdingNextTrack");
+    try {
+      await this.spotifyPlayer.pause();
+      activeTransition.pausedNextTrack = true;
+    } catch (err) {
+      console.warn("[PlaybackCoordinator] Failed to pause next track:", err);
+    }
+
+    return true;
+  }
+
+  isCarryingTransitionAcrossBoundary() {
+    return !!(
+      this.activeTransition &&
+      this.activeTransition.mode === "hold-next-track" &&
+      (this.activeTransition.waitingForBoundary || this.activeTransition.pausedNextTrack)
+    );
   }
 
   getState() {
@@ -92,6 +131,32 @@ class PlaybackCoordinatorImpl {
     return () => {
       this.volumeHandlers = this.volumeHandlers.filter((h) => h !== handler);
     };
+  }
+
+  async _finishHoldTransition(activeTransition) {
+    if (this.activeTransition !== activeTransition) return;
+    activeTransition.waitingForBoundary = false;
+    await this._finishTransition(activeTransition, activeTransition.pausedNextTrack);
+  }
+
+  async _finishTransition(activeTransition, resumePlayback) {
+    if (this.activeTransition !== activeTransition) return;
+
+    this._setState("resumingPlayback");
+    try {
+      if (resumePlayback) {
+        await this.spotifyPlayer.setVolume(activeTransition.fadeBackTo).catch(() => {});
+        await this.spotifyPlayer.resume().catch(() => {});
+        this.volumeHandlers.forEach((handler) => handler(activeTransition.fadeBackTo));
+      } else {
+        await this._fadeVolume(activeTransition.duckedVolume, activeTransition.fadeBackTo, FADE_IN_DURATION_MS, FADE_IN_STEPS);
+      }
+    } finally {
+      if (this.activeTransition === activeTransition) {
+        this.activeTransition = null;
+      }
+      this._setState("monitoring");
+    }
   }
 
   _setState(state) {

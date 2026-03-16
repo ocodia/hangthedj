@@ -4,13 +4,14 @@ name: The Mountain Frequency
 voice: onyx
 elevenLabsVoiceId: n5kSEVO24b8CF1IsU4B6
 speechRate: 0.95
+banterShortMaxWords: 28
+banterMediumMaxWords: 55
+banterLongMaxWords: 95
 ---
 
 # The Mountain Frequency
 
 From somewhere out there in the trees.
-
----
 
 ## Concept
 
@@ -97,7 +98,7 @@ This station feels **authentic and human**, not polished.
 
 > “Music like this makes the road a little shorter.”
 
-> “Somewhere out there, somebody needed that song. I know I did.”
+> “Somewhere out there, somebody needed that song.”
 
 ---
 

@@ -4,6 +4,9 @@ name: The Magpie
 voice: echo
 elevenLabsVoiceId: aD6riP1btT197c6dACmy
 speechRate: 1.0
+banterShortMaxWords: 20
+banterMediumMaxWords: 38
+banterLongMaxWords: 60
 ---
 
 # The Magpie
