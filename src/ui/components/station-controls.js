@@ -545,7 +545,7 @@ export class StationControls {
   }
 
   /**
-   * Play the DJ intro and fade music in 2.5s before the banter clip finishes.
+   * Play the DJ intro, then fade music in only after the banter clip finishes.
    */
   async _playDjIntroWithFade() {
     const { banterEngine, voiceEngine } = this.services;
@@ -610,10 +610,8 @@ export class StationControls {
         text: `🎤 ${banterResult.text}`,
       });
 
-      // Play intro and start fading music in 3s before the clip ends
-      await this.services.djPlayer.playWithFadeCallback(voiceResult.objectUrl, 2.5, () => {
-        this._fadeSpotifyVolume(0, this.userMusicVolume, 3_000);
-      });
+      await this.services.djPlayer.play(voiceResult.objectUrl);
+      await this._fadeSpotifyVolume(0, this.userMusicVolume, 3_000);
       this.services.scheduler.recordInsertion("stationIdent");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

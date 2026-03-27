@@ -48,6 +48,8 @@ class PlaybackCoordinatorImpl {
       fadeBackTo: this.originalVolume,
       duckedVolume: (transition.transitionMode ?? "overlay") === "pause-and-duck" ? 0 : DUCKED_VOLUME,
       pausedSpotify: false,
+      pausedTrackId: this.spotifyPlayer.getCurrentTrack()?.id ?? null,
+      expectedNextTrackId: this.spotifyPlayer.getNextTrack()?.id ?? null,
     };
 
     this.activeTransition = activeTransition;
@@ -115,6 +117,10 @@ class PlaybackCoordinatorImpl {
     try {
       if (activeTransition.pausedSpotify) {
         await this.spotifyPlayer.setVolume(0).catch(() => {});
+        const advancedToNextTrack = await this._prepareNextTrack(activeTransition);
+        if (!advancedToNextTrack) {
+          console.warn("[PlaybackCoordinator] Falling back to resuming paused track after banter");
+        }
         await this.spotifyPlayer.resume().catch(() => {});
       }
       await this._fadeVolume(activeTransition.duckedVolume, activeTransition.fadeBackTo, FADE_IN_DURATION_MS, FADE_IN_STEPS);
@@ -147,6 +153,81 @@ class PlaybackCoordinatorImpl {
           resolve();
         }
       }, intervalMs);
+    });
+  }
+
+  async _prepareNextTrack(activeTransition) {
+    const currentTrackId = this.spotifyPlayer.getCurrentTrack()?.id ?? null;
+    const shouldAdvance =
+      !!activeTransition.pausedTrackId &&
+      currentTrackId === activeTransition.pausedTrackId;
+
+    if (!shouldAdvance) {
+      return currentTrackId !== activeTransition.pausedTrackId;
+    }
+
+    try {
+      await this.spotifyPlayer.nextTrack();
+    } catch (err) {
+      console.warn("[PlaybackCoordinator] Failed to skip to next Spotify track before resume:", err);
+      return false;
+    }
+
+    return this._waitForTrackReady(activeTransition);
+  }
+
+  _waitForTrackReady(activeTransition) {
+    return new Promise((resolve) => {
+      const timeoutMs = 2_500;
+      const startedAt = Date.now();
+      let settled = false;
+      let timeoutId = null;
+      let unsubscribe = () => {};
+
+      const finish = (ready) => {
+        if (settled) return;
+        settled = true;
+        unsubscribe();
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+        }
+        resolve(ready);
+      };
+
+      const checkReady = () => {
+        const currentTrackId = this.spotifyPlayer.getCurrentTrack()?.id ?? null;
+        const expectedNextTrackId = activeTransition.expectedNextTrackId;
+        const movedOffPausedTrack =
+          !!activeTransition.pausedTrackId && currentTrackId !== activeTransition.pausedTrackId;
+        const reachedExpectedTrack =
+          !!expectedNextTrackId && currentTrackId === expectedNextTrackId;
+
+        if (reachedExpectedTrack || movedOffPausedTrack) {
+          finish(true);
+          return true;
+        }
+
+        if (Date.now() - startedAt >= timeoutMs) {
+          finish(false);
+          return true;
+        }
+
+        return false;
+      };
+
+      if (checkReady()) {
+        return;
+      }
+
+      unsubscribe = this.spotifyPlayer.onStateChange(() => {
+        if (checkReady()) {
+          return;
+        }
+      });
+
+      timeoutId = window.setTimeout(() => {
+        checkReady();
+      }, timeoutMs);
     });
   }
 }

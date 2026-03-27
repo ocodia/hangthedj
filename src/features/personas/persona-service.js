@@ -7,7 +7,6 @@ import { savePersona, getPersona, getAllPersonas, deletePersona } from "../stora
 import { generateUUID } from "../../utils.js";
 import { DEFAULT_PERSONA_MANIFEST } from "./default-persona-manifest.js";
 
-const LEGACY_PRESET_NAMES = new Set(["DJ Pirate", "DJ Classic Rock"]);
 export const DEFAULT_BANTER_WORD_CAPS = Object.freeze({
   short: 25,
   medium: 45,
@@ -21,9 +20,10 @@ class PersonaServiceImpl {
     const all = await getAllPersonas();
     const presets = await loadDefaultPersonas();
     const expectedPresetIds = new Set(presets.map((preset) => preset.id));
+    const expectedPresetNames = new Set(presets.map((preset) => preset.name));
 
     for (const persona of all) {
-      const isLegacyPreset = persona.isPreset && LEGACY_PRESET_NAMES.has(persona.name);
+      const isLegacyPreset = persona.isPreset && !persona.presetKey && !expectedPresetNames.has(persona.name);
       const isRemovedDefault = persona.isPreset && persona.presetKey && !expectedPresetIds.has(persona.presetKey);
       if (isLegacyPreset || isRemovedDefault) {
         await deletePersona(persona.id);
