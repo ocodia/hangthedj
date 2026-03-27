@@ -77,7 +77,7 @@ export class PersonaEditor {
         </div>
         <div class="field">
           <label for="pe-system-prompt">System Prompt</label>
-          <textarea id="pe-system-prompt" rows="6"
+          <textarea id="pe-system-prompt" rows="20"
             placeholder="Describe the DJ's personality, tone, delivery style…"
             style="width:100%;resize:vertical;font-size:0.85rem">${escapeHtml(p.systemPrompt)}</textarea>
           <p class="muted" style="font-size:0.75rem;margin-top:0.25rem">This is the character description sent to the AI. Include tone, delivery style, and word count guidance.</p>
@@ -129,7 +129,7 @@ export class PersonaEditor {
         <div class="persona-editor-actions">
           <button id="btn-pe-save">${this._isNew ? "Add Persona" : "Save Changes"}</button>
           ${!this._isNew && !p.isPreset ? `<button class="danger btn-sm" id="btn-pe-delete">Delete</button>` : ""}
-          <button class="secondary btn-sm" id="btn-pe-cancel">Cancel</button>
+          <button class="secondary" id="btn-pe-cancel">Cancel</button>
         </div>
       </div>
     `;

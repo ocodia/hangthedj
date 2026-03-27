@@ -114,8 +114,8 @@ export class StationControls {
         <label for="persona-select">DJ Persona</label>
         <div style="display:flex;gap:0.5rem;align-items:center">
           <select id="persona-select" style="flex:1">${personaOptions}</select>
-          <button class="secondary btn-sm" id="btn-edit-persona">Edit</button>
-          <button class="secondary btn-sm" id="btn-add-persona">+ New</button>
+          <button class="secondary" id="btn-edit-persona">Edit</button>
+          <button class="secondary" id="btn-add-persona">+ New</button>
         </div>
       </div>
       <div id="persona-editor-mount"></div>
@@ -142,9 +142,9 @@ export class StationControls {
           this.isStopping
             ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Signing off…</button>`
             : session.isRunning
-              ? `<button class="playback-toggle" id="btn-play-pause" title="${appStore.get("playback").isPlaying ? "Pause" : "Play"}">${appStore.get("playback").isPlaying ? "⏸" : "▶"}</button>
+              ? `<button id="btn-play-pause" title="${appStore.get("playback").isPlaying ? "Pause" : "Play"}">${appStore.get("playback").isPlaying ? "⏸" : "▶"}</button>
                  <button class="danger" id="btn-stop">Sign Off</button>
-               ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" style="margin-left:0.5rem;background:#555;color:#ff0;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px dashed #ff0;border-radius:4px;cursor:pointer" title="Skip to ~35s before end of track">⏩ Skip to banter</button>` : ""}`
+               ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" class="secondary" title="Skip to ~35s before end of track">Skip to banter</button>` : ""}`
               : `<button id="btn-start" ${!spotify.isConnected || !this.musicPicker.getSelection() ? "disabled" : ""}>Tune In</button>`
         }
       </div>
@@ -699,9 +699,7 @@ export class StationControls {
       const statusEl = this.element.querySelector("#dj-status");
       if (statusEl) {
         statusEl.textContent =
-          transition.transitionMode === "pause-and-duck"
-            ? "DJ is pausing music for banter…"
-            : "DJ is talking over ducked music…";
+          transition.transitionMode === "pause-and-duck" ? "DJ is pausing music for banter…" : "DJ is talking over ducked music…";
       }
 
       await this.services.coordinator.executeTransition(transition);
@@ -960,10 +958,7 @@ export class StationControls {
     const overlayBudgetSeconds = safeOverlaySeconds + OVERLAY_TOLERANCE_SECONDS;
     const overflowSeconds = plannedDurationSeconds - overlayBudgetSeconds;
     const transitionMode = plannedDurationSeconds > overlayBudgetSeconds ? "pause-and-duck" : "overlay";
-    const durationComparison =
-      overflowSeconds > 0
-        ? `over by ${overflowSeconds.toFixed(1)}s`
-        : `under by ${Math.abs(overflowSeconds).toFixed(1)}s`;
+    const durationComparison = overflowSeconds > 0 ? `over by ${overflowSeconds.toFixed(1)}s` : `under by ${Math.abs(overflowSeconds).toFixed(1)}s`;
 
     return {
       banterSize,
