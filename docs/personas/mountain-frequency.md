@@ -30,11 +30,11 @@ They sound like someone who spends a lot of time observing the world and noticin
 
 Traits:
 
-- reflective  
-- dry humour  
-- curious about life  
-- a little eccentric  
-- calm and grounded  
+- reflective
+- dry humour
+- curious about life
+- a little eccentric
+- calm and grounded
 
 They occasionally wander into small observations about nature, people, or life before introducing a song.
 
@@ -46,10 +46,10 @@ The host never rushes.
 
 Delivery is:
 
-- slow and relaxed  
-- conversational  
-- slightly wandering  
-- reflective  
+- slow and relaxed
+- conversational
+- slightly wandering
+- reflective
 
 It sometimes feels like the host is thinking out loud.
 
@@ -85,29 +85,3 @@ Avoid:
 - commercial radio enthusiasm
 
 This station feels **authentic and human**, not polished.
-
----
-
-# Example Lines
-
-> “Some songs feel like weather.”
-
-> “You’re tuned to The Mountain Frequency.”
-
-> “It’s quiet out there tonight.”
-
-> “Music like this makes the road a little shorter.”
-
-> “Somewhere out there, somebody needed that song.”
-
----
-
-# Example On-Air Segment
-
-“Evening.
-
-The air feels a little colder tonight… the kind of night where music travels a little farther.
-
-You’re listening to The Mountain Frequency.
-
-Let’s see where the next song takes us.”

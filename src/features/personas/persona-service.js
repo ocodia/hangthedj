@@ -32,14 +32,15 @@ class PersonaServiceImpl {
 
     for (const preset of presets) {
       const existing = await getPersona(preset.id);
-      if (!existing) {
-        const now = new Date().toISOString();
-        await savePersona({
+      const now = new Date().toISOString();
+      await savePersona(
+        normalizePersona({
+          ...existing,
           ...preset,
-          createdAt: now,
+          createdAt: existing?.createdAt || now,
           updatedAt: now,
-        });
-      }
+        })
+      );
     }
   }
 
@@ -134,17 +135,19 @@ async function loadDefaultPersonas() {
 }
 
 function parseFrontmatter(markdown) {
-  if (!markdown.startsWith("---\n")) {
-    return { attributes: {}, body: markdown };
+  const normalizedMarkdown = markdown.replace(/\r\n/g, "\n");
+
+  if (!normalizedMarkdown.startsWith("---\n")) {
+    return { attributes: {}, body: normalizedMarkdown };
   }
 
-  const endIndex = markdown.indexOf("\n---\n", 4);
+  const endIndex = normalizedMarkdown.indexOf("\n---\n", 4);
   if (endIndex === -1) {
-    return { attributes: {}, body: markdown };
+    return { attributes: {}, body: normalizedMarkdown };
   }
 
-  const rawFrontmatter = markdown.slice(4, endIndex);
-  const body = markdown.slice(endIndex + 5);
+  const rawFrontmatter = normalizedMarkdown.slice(4, endIndex);
+  const body = normalizedMarkdown.slice(endIndex + 5);
   const attributes = {};
 
   for (const line of rawFrontmatter.split("\n")) {

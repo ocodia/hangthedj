@@ -92,6 +92,7 @@ export class StationControls {
     const session = appStore.get("session");
     const ai = appStore.get("ai");
     const spotify = appStore.get("spotify");
+    const stationTitle = this._getStationHeaderTitle();
 
     const persona = appStore.get("persona");
     const personaOptions = persona.personas
@@ -105,7 +106,7 @@ export class StationControls {
 
     this.element.innerHTML = `
       <div class="station-header">
-        <h2>Station</h2>
+        <h2>${escapeHtml(stationTitle)}</h2>
         <span class="station-status ${session.isRunning ? "status-on" : "status-off"}">
           ${session.isRunning ? "● On Air" : "○ Off Air"}
         </span>
@@ -1021,6 +1022,26 @@ export class StationControls {
     const isPlaying = appStore.get("playback").isPlaying;
     btn.textContent = isPlaying ? "⏸" : "▶";
     btn.title = isPlaying ? "Pause" : "Play";
+  }
+
+  _getStationHeaderTitle() {
+    const selection = this.musicPicker.getSelection();
+    if (!selection) {
+      return "Station";
+    }
+
+    switch (selection.type) {
+      case "playlist":
+        return selection.name;
+      case "album":
+        return `${selection.name} Radio`;
+      case "artist":
+        return `${selection.name} Radio`;
+      case "track":
+        return `${selection.name} Radio`;
+      default:
+        return selection.name || "Station";
+    }
   }
 
   _logPromptsIfDebug(result) {

@@ -30,7 +30,7 @@ export class NowPlayingBar {
     if (!track) {
       this.element.innerHTML = `
         <div class="now-playing-empty muted">
-          No track playing. Open Spotify and start playing music.
+          No track playing. Select a station and tune in!
         </div>
       `;
       return;
