@@ -1,5 +1,5 @@
 /**
- * StationControls: start/stop session, mood selector, DJ status.
+ * StationControls: start/stop session, mood selector, and DJ controls.
  *
  * Two-phase banter system:
  *   Phase 1: < 30s remaining → pre-generate banter + TTS
@@ -165,9 +165,6 @@ export class StationControls {
           <input type="range" id="vol-dj" min="0" max="100" value="100" class="volume-slider" />
           <span class="volume-value" id="vol-dj-value">100%</span>
         </div>
-      </div>
-      <div class="dj-status muted" id="dj-status">
-        ${session.isRunning ? "DJ is monitoring the station..." : "Session stopped."}
       </div>
     `;
 
@@ -708,16 +705,8 @@ export class StationControls {
           `${transition.durationComparison}]`,
       });
 
-      const statusEl = this.element.querySelector("#dj-status");
-      if (statusEl) {
-        statusEl.textContent =
-          transition.transitionMode === "pause-and-duck" ? "DJ is pausing music for banter…" : "DJ is talking over ducked music…";
-      }
-
       await this.services.coordinator.executeTransition(transition);
       this.services.scheduler.recordInsertion(transition.segmentType);
-
-      if (statusEl) statusEl.textContent = "DJ is monitoring the station…";
     }
 
     // Phase 3: Process call-in queue
@@ -767,8 +756,6 @@ export class StationControls {
 
     try {
       updateAiState({ isGenerating: true, lastError: null });
-      const statusEl = this.element.querySelector("#dj-status");
-      if (statusEl) statusEl.textContent = "DJ is thinking…";
       addDjActivityEntry({ type: "system", text: "🧠 Generating banter script…", debug: true });
 
       const constraints = this._buildBanterConstraints(personaState.activePersona, decision.segmentType);
@@ -793,7 +780,6 @@ export class StationControls {
 
       console.log("[Banter] Script generated:", banterResult.text);
       updateAiState({ isGenerating: false, isRendering: true });
-      if (statusEl) statusEl.textContent = "DJ is recording…";
       addDjActivityEntry({ type: "system", text: "🎙️ Rendering voice…", debug: true });
 
       const voiceResult = await voiceEngine.render({
@@ -838,8 +824,6 @@ export class StationControls {
         triggerRemainingMs: transitionPlan.triggerRemainingMs,
       };
       this.pendingTransitionForTrackId = currentTrackId;
-
-      if (statusEl) statusEl.textContent = `DJ ready: "${banterResult.text.slice(0, 60)}…"`;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[Banter] Failed:", msg);
@@ -1038,7 +1022,7 @@ export class StationControls {
   _getStationHeaderTitle() {
     const selection = this.musicPicker.getSelection();
     if (!selection) {
-      return "HangTheDJ";
+      return "Pick a station";
     }
 
     switch (selection.type) {

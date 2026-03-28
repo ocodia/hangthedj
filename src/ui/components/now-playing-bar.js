@@ -30,7 +30,7 @@ export class NowPlayingBar {
     if (!track) {
       this.element.innerHTML = `
         <div class="now-playing-empty muted">
-          Choose a DJ, pick some music, and tune in to get started!
+          
         </div>
       `;
       return;
