@@ -699,10 +699,7 @@ export class StationControls {
 
       addDjActivityEntry({
         type: "dj",
-        text:
-          `🎤 ${transition.banterText}${transition.trackInfo} ` +
-          `[${transition.banterSize}, ${transition.transitionMode}, ${transition.plannedDurationSeconds.toFixed(1)}s, ` +
-          `${transition.durationComparison}]`,
+        text: `🎤 ${transition.banterText}${transition.trackInfo}`,
       });
 
       await this.services.coordinator.executeTransition(transition);

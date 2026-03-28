@@ -19,20 +19,21 @@ export class RequestLinePanel {
 
   _render() {
     const savedName = localStorage.getItem(CALLER_NAME_KEY) ?? "";
+    const isStationRunning = appStore.get("session").isRunning;
 
     this.element.innerHTML = `
       <h2>📞 Call In</h2>
       <p class="muted" style="font-size:0.85rem;margin-bottom:1rem">
-        Request an artist, track, or mood for the DJ.
+        Request a track and shoutout from the DJ.
       </p>
       <form id="request-form" autocomplete="off">
         <div class="field">
           <label for="caller-name">Your name (optional)</label>
-          <input type="text" id="caller-name" placeholder="e.g. Alex" maxlength="50" value="${escapeAttr(savedName)}" />
+          <input type="text" id="caller-name" placeholder="e.g. Alex" maxlength="50" value="${escapeAttr(savedName)}" ${isStationRunning ? "" : "disabled"} />
         </div>
         <div class="field" style="position:relative">
           <label for="search-input">Search artist or track *</label>
-          <input type="text" id="search-input" placeholder="e.g. Radiohead Karma Police" maxlength="150" required autocomplete="off" />
+          <input type="text" id="search-input" placeholder="e.g. Radiohead Karma Police" maxlength="150" required autocomplete="off" ${isStationRunning ? "" : "disabled"} />
           <div id="search-results" class="search-results" style="display:none"></div>
         </div>
         <div class="field" id="selected-track-field" style="display:none">
@@ -42,15 +43,15 @@ export class RequestLinePanel {
               <span id="selected-title" class="selected-title"></span>
               <span id="selected-artist" class="selected-artist muted"></span>
             </div>
-            <button type="button" id="btn-clear-selection" class="btn-clear-selection" title="Clear selection">✕</button>
+            <button type="button" id="btn-clear-selection" class="btn-clear-selection" title="Clear selection" ${isStationRunning ? "" : "disabled"}>✕</button>
           </div>
         </div>
         <div class="field">
           <label for="message">Message (optional)</label>
-          <textarea id="message" placeholder="Say something to the DJ..." maxlength="200" rows="2"></textarea>
+          <textarea id="message" placeholder="Say something to the DJ..." maxlength="200" rows="2" ${isStationRunning ? "" : "disabled"}></textarea>
         </div>
         <div id="request-feedback" class="request-feedback" style="display:none"></div>
-        <button type="submit" id="btn-submit-request">Send Request</button>
+        <button type="submit" id="btn-submit-request" ${isStationRunning ? "" : "disabled"}>Send Request</button>
       </form>
       <div class="request-history" id="request-history"></div>
     `;
@@ -75,11 +76,16 @@ export class RequestLinePanel {
     });
 
     appStore.subscribe("requests", () => this._renderHistory());
+    appStore.subscribe("session", () => this._syncEnabledState());
   }
 
   // ── Spotify search ──────────────────────────────────────────────────────────
 
   _onSearchInput() {
+    if (!appStore.get("session").isRunning) {
+      this._hideSearchResults();
+      return;
+    }
     if (this.searchTimer) clearTimeout(this.searchTimer);
     const query = this.element.querySelector("#search-input")?.value?.trim() ?? "";
     if (query.length < 2) {
@@ -172,10 +178,10 @@ export class RequestLinePanel {
     const session = appStore.get("session");
     const feedback = this.element.querySelector("#request-feedback");
 
-    if (!session.activeSession) {
+    if (!session.isRunning || !session.activeSession) {
       feedback.style.display = "block";
       feedback.className = "request-feedback error-text";
-      feedback.textContent = "Start a session first before calling in.";
+      feedback.textContent = "Tune in first before calling in.";
       return;
     }
 
@@ -256,6 +262,28 @@ export class RequestLinePanel {
   _getValue(id) {
     const val = this.element.querySelector(`#${id}`)?.value?.trim();
     return val || undefined;
+  }
+
+  _syncEnabledState() {
+    const isStationRunning = appStore.get("session").isRunning;
+    const callerName = this.element.querySelector("#caller-name");
+    const searchInput = this.element.querySelector("#search-input");
+    const message = this.element.querySelector("#message");
+    const submitButton = this.element.querySelector("#btn-submit-request");
+    const clearButton = this.element.querySelector("#btn-clear-selection");
+
+    if (callerName) callerName.disabled = !isStationRunning;
+    if (message) message.disabled = !isStationRunning;
+    if (submitButton) submitButton.disabled = !isStationRunning;
+    if (clearButton) clearButton.disabled = !isStationRunning;
+
+    if (searchInput) {
+      searchInput.disabled = !isStationRunning || !!this.selectedTrack;
+    }
+
+    if (!isStationRunning) {
+      this._hideSearchResults();
+    }
   }
 }
 
