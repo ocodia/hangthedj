@@ -114,23 +114,13 @@ export class StationControls {
         </span>
       </div>
       <div id="now-playing-mount"></div>
-      <div class="field">
-        <label for="persona-select">DJ Persona</label>
-        <div style="display:flex;gap:0.5rem;align-items:center">
-          <select id="persona-select" style="flex:1">${personaOptions}</select>
-          <button class="secondary" id="btn-edit-persona">Edit</button>
-          <button class="secondary" id="btn-add-persona">+ New</button>
-        </div>
-      </div>
-      <div id="persona-editor-mount"></div>
-      ${!ai.hasOpenAiKey ? `<p class="muted" style="font-size:0.8rem">Set your OpenAI key in Settings to enable DJ banter.</p>` : ""}
       ${!spotify.isConnected && !session.isRunning ? `<p class="muted" style="font-size:0.8rem">Connect Spotify to start a session.</p>` : ""}
-      <div id="music-picker-mount"></div>
-      <div class="station-actions">
+      <div class="station-setup-row">
+        <div id="music-picker-mount" class="station-setup-primary"></div>
         ${
           !session.isRunning
             ? `
-        <div class="field toggle-field" style="margin-bottom:0">
+        <div class="field toggle-field station-shuffle-toggle" style="margin-bottom:0">
           <label class="toggle-switch">
             <input type="checkbox" id="chk-shuffle" ${this.shuffleEnabled ? "checked" : ""} />
             <span class="toggle-slider"></span>
@@ -142,6 +132,18 @@ export class StationControls {
         </div>`
             : ""
         }
+      </div>
+      <div class="field">
+        <label for="persona-select">DJ Persona</label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <select id="persona-select" style="flex:1">${personaOptions}</select>
+          <button class="secondary" id="btn-edit-persona">Edit</button>
+          <button class="secondary" id="btn-add-persona">+ New</button>
+        </div>
+      </div>
+      <div id="persona-editor-mount"></div>
+      ${!ai.hasOpenAiKey ? `<p class="muted" style="font-size:0.8rem">Set your OpenAI key in Settings to enable DJ banter.</p>` : ""}
+      <div class="station-actions">
         ${
           this.isStopping
             ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Signing off…</button>`
