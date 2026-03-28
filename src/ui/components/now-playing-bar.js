@@ -8,7 +8,7 @@ export class NowPlayingBar {
   constructor(services) {
     this.services = services;
     this.element = document.createElement("div");
-    this.element.className = "now-playing-bar panel";
+    this.element.className = "now-playing-bar";
     this._render(appStore.get("playback"));
 
     appStore.subscribe("playback", (state) => {
@@ -30,7 +30,7 @@ export class NowPlayingBar {
     if (!track) {
       this.element.innerHTML = `
         <div class="now-playing-empty muted">
-          No track playing. Select a station and tune in!
+          Choose a DJ, pick some music, and tune in to get started!
         </div>
       `;
       return;
@@ -41,9 +41,6 @@ export class NowPlayingBar {
     const progressSec = Math.round(playback.progressMs / 1000);
     const durationSec = Math.round(playback.durationMs / 1000);
     const pct = playback.durationMs > 0 ? Math.min(100, (playback.progressMs / playback.durationMs) * 100) : 0;
-
-    const nextTrack = playback.nextTrack;
-    const coordinatorState = playback.coordinator;
 
     this.element.innerHTML = `
       <div class="now-playing-content">
@@ -57,11 +54,6 @@ export class NowPlayingBar {
             </div>
             <span class="track-time muted">${formatTime(progressSec)} / ${formatTime(durationSec)}  ·  ${remainingSec}s left</span>
           </div>
-        </div>
-        <div class="now-playing-meta">
-          <div class="now-playing-label">♫ Now playing</div>
-          
-          ${nextTrack ? `<div class="next-track-info muted" title="Next in queue">⏭ ${escapeHtml(nextTrack.title)} — ${escapeHtml(nextTrack.artistName)}</div>` : ""}
         </div>
       </div>
     `;

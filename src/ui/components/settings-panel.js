@@ -119,7 +119,10 @@ export class SettingsPanel {
           hasSpotifyClientId()
             ? `<div class="key-status">
               <span style="color:var(--color-accent)">✓ Client ID set</span>
-              <button class="secondary btn-sm" id="btn-clear-spotify-id" style="margin-left:0.75rem">Clear</button>
+            </div>
+            <div class="settings-inline-actions">
+              <button class="secondary btn-sm" id="btn-spotify-sign-out">Sign out</button>
+              <button class="secondary btn-sm" id="btn-clear-spotify-id">Clear</button>
             </div>`
             : `<p class="muted" style="font-size:0.8rem">No Spotify Client ID set. Sign out and set it on the login screen.</p>`
         }
@@ -203,6 +206,12 @@ export class SettingsPanel {
     this.element.querySelector("#btn-clear-spotify-id")?.addEventListener("click", () => {
       if (confirm("Clear your Spotify Client ID? You will need to log in again.")) {
         this.callbacks.onSpotifyClientIdClear();
+      }
+    });
+
+    this.element.querySelector("#btn-spotify-sign-out")?.addEventListener("click", () => {
+      if (confirm("Sign out of Spotify?")) {
+        this.callbacks.onLogout();
       }
     });
   }

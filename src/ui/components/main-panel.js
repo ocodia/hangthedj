@@ -2,7 +2,6 @@
  * MainPanel: the main application UI after Spotify auth.
  */
 
-import { NowPlayingBar } from "./now-playing-bar.js";
 import { StationControls } from "./station-controls.js";
 import { RequestLinePanel } from "./request-line-panel.js";
 import { SettingsPanel } from "./settings-panel.js";
@@ -25,22 +24,15 @@ export class MainPanel {
     header.className = "app-header";
     header.innerHTML = `
       <div class="header-left">
-        <span class="app-icon">🎧</span>
-        <span class="app-name">HangTheDJ</span>
-      </div>
-      <div class="header-right">
-        <button class="secondary btn-sm" id="btn-logout">Sign out</button>
+      <span class="app-icon">🎧</span>
+      <span class="app-name">HangTheDJ</span>
       </div>
     `;
-    header.querySelector("#btn-logout")?.addEventListener("click", () => this.callbacks.onLogout());
     this.element.appendChild(header);
 
     // Main content area
     const content = document.createElement("main");
     content.className = "main-content";
-
-    const nowPlaying = new NowPlayingBar(this.services);
-    content.appendChild(nowPlaying.element);
 
     // AI key warning if not set
     const aiState = appStore.get("ai");

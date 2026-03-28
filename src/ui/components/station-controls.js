@@ -19,6 +19,7 @@ import { saveSettings, loadSettings, saveSession } from "../../features/storage/
 import { generateUUID } from "../../utils.js";
 import { PersonaEditor } from "./persona-editor.js";
 import { StationMusicPicker } from "./station-music-picker.js";
+import { NowPlayingBar } from "./now-playing-bar.js";
 
 const WORDS_PER_SECOND = 2.5;
 const OVERLAY_TOLERANCE_SECONDS = 0.5;
@@ -55,6 +56,7 @@ export class StationControls {
 
     this.musicPicker = new StationMusicPicker(services.spotifyPlayer);
     this.musicPicker.onSelectionChange(() => this._render());
+    this.nowPlayingBar = new NowPlayingBar(services);
 
     this.element = document.createElement("div");
     this.element.className = "station-controls panel";
@@ -111,6 +113,7 @@ export class StationControls {
           ${session.isRunning ? "● On Air" : "○ Off Air"}
         </span>
       </div>
+      <div id="now-playing-mount"></div>
       <div class="field">
         <label for="persona-select">DJ Persona</label>
         <div style="display:flex;gap:0.5rem;align-items:center">
@@ -180,6 +183,12 @@ export class StationControls {
         this.services.spotifyPlayer.resume().catch(console.error);
       }
     });
+
+    const nowPlayingMount = this.element.querySelector("#now-playing-mount");
+    if (nowPlayingMount) {
+      this.nowPlayingBar.element.classList.add("now-playing-bar--station");
+      nowPlayingMount.appendChild(this.nowPlayingBar.element);
+    }
 
     // Mount the music picker when off-air
     const pickerMount = this.element.querySelector("#music-picker-mount");
