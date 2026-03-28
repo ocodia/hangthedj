@@ -11,13 +11,15 @@ import {
   updateSessionState,
   updateAiState,
   updatePlaybackState,
+  updatePersonaState,
   addDjActivityEntry,
   clearDjActivity,
 } from "../../stores/app-store.js";
-import { saveSession } from "../../features/storage/storage-service.js";
+import { saveSession, saveSettings, loadSettings } from "../../features/storage/storage-service.js";
 import { generateUUID } from "../../utils.js";
 import { StationMusicPicker } from "./station-music-picker.js";
 import { NowPlayingBar } from "./now-playing-bar.js";
+import { PersonaEditor } from "./persona-editor.js";
 
 const WORDS_PER_SECOND = 2.5;
 const OVERLAY_TOLERANCE_SECONDS = 0.5;
@@ -43,6 +45,14 @@ export class StationControls {
     this.pendingCallIns = [];
     this.isProcessingCallIn = false;
     this.processedCallInSummaries = [];
+
+    this.personaEditor = new PersonaEditor(services, {
+      onClose: () => {
+        this.personaEditor.close();
+        this._render();
+      },
+      getElevenLabsKey: () => this.services.callbacks?.getElevenLabsKey?.() ?? null,
+    });
 
     this.musicPicker = new StationMusicPicker(services.spotifyPlayer);
     this.musicPicker.onSelectionChange(() => this._render());
@@ -84,6 +94,15 @@ export class StationControls {
     const session = appStore.get("session");
     const spotify = appStore.get("spotify");
     const stationTitle = this._getStationHeaderTitle();
+    const persona = appStore.get("persona");
+    const personaOptions = persona.personas
+      .map(
+        (p) =>
+          `<option value="${p.id}" ${p.id === persona.activePersona?.id ? "selected" : ""}>
+            ${escapeHtml(p.name)}${p.isPreset ? " ★" : ""}
+          </option>`,
+      )
+      .join("");
 
     this.element.innerHTML = `
       <div class="station-header">
@@ -113,6 +132,11 @@ export class StationControls {
         }
       </div>
       <div class="station-actions">
+        <select id="persona-select" class="station-persona-select">
+          ${personaOptions}
+        </select>
+        <button class="secondary" id="btn-edit-persona">Edit</button>
+        <button class="secondary" id="btn-add-persona">+ New</button>
         ${
           this.isStopping
             ? `<button disabled style="background:#e67e22;color:#fff;cursor:not-allowed">Signing off…</button>`
@@ -123,6 +147,7 @@ export class StationControls {
               : `<button id="btn-start" ${!spotify.isConnected || !this.musicPicker.getSelection() ? "disabled" : ""}>Tune In</button>`
         }
       </div>
+      <div id="persona-editor-mount"></div>
       <div class="volume-sliders">
         <div class="volume-slider-row">
           <label class="volume-label">🎵 Music</label>
@@ -151,11 +176,35 @@ export class StationControls {
         this.services.spotifyPlayer.resume().catch(console.error);
       }
     });
+    this.element.querySelector("#btn-edit-persona")?.addEventListener("click", () => {
+      const activePersona = appStore.get("persona").activePersona;
+      if (activePersona) {
+        this.personaEditor.open(activePersona);
+        this._mountPersonaEditor();
+      }
+    });
+    this.element.querySelector("#btn-add-persona")?.addEventListener("click", () => {
+      this.personaEditor.open(null);
+      this._mountPersonaEditor();
+    });
+    this.element.querySelector("#persona-select")?.addEventListener("change", async (e) => {
+      const id = e.target.value;
+      const selectedPersona = await this.services.personaService.getById(id);
+      if (selectedPersona) {
+        updatePersonaState({ activePersona: selectedPersona });
+        const current = loadSettings();
+        saveSettings({ ...current, activePersonaId: id });
+      }
+    });
 
     const nowPlayingMount = this.element.querySelector("#now-playing-mount");
     if (nowPlayingMount) {
       this.nowPlayingBar.element.classList.add("now-playing-bar--station");
       nowPlayingMount.appendChild(this.nowPlayingBar.element);
+    }
+
+    if (this.personaEditor.isOpen()) {
+      this._mountPersonaEditor();
     }
 
     // Mount the music picker when off-air
@@ -203,6 +252,14 @@ export class StationControls {
       this.services.djPlayer.setVolume(val / 100);
     });
 
+  }
+
+  _mountPersonaEditor() {
+    const mount = this.element.querySelector("#persona-editor-mount");
+    if (mount) {
+      mount.innerHTML = "";
+      mount.appendChild(this.personaEditor.element);
+    }
   }
 
   // ── Session lifecycle ───────────────────────────────────────────────────────
