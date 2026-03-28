@@ -108,7 +108,7 @@ export class StationControls {
 
     this.element.innerHTML = `
       <div class="station-header">
-        <h2>${escapeHtml(stationTitle)}</h2>
+        <h1>🎙️${escapeHtml(stationTitle)}</h1>
         <span class="station-status ${session.isRunning ? "status-on" : "status-off"}">
           ${session.isRunning ? "● On Air" : "○ Off Air"}
         </span>
@@ -148,7 +148,7 @@ export class StationControls {
             : session.isRunning
               ? `<button id="btn-play-pause" title="${appStore.get("playback").isPlaying ? "Pause" : "Play"}">${appStore.get("playback").isPlaying ? "⏸" : "▶"}</button>
                  <button class="danger" id="btn-stop">Sign Off</button>
-               ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" class="secondary" title="Skip to ~35s before end of track">Skip to banter</button>` : ""}`
+               ${appStore.get("settings").debugMode ? `<button id="btn-debug-skip" class="secondary" title="Skip to ~35s before end of track">Skip</button>` : ""}`
               : `<button id="btn-start" ${!spotify.isConnected || !this.musicPicker.getSelection() ? "disabled" : ""}>Tune In</button>`
         }
       </div>
@@ -298,9 +298,9 @@ export class StationControls {
       console.warn("[DebugSkip] No position data");
       return;
     }
-    const seekTo = Math.max(0, pos.durationMs - 35_000);
-    console.log(`[DebugSkip] Seeking to ${Math.round(seekTo / 1000)}s / ${Math.round(pos.durationMs / 1000)}s (35s before end)`);
-    addDjActivityEntry({ type: "system", text: `⏩ Debug skip: jumping to ${Math.round(seekTo / 1000)}s (35s before end)`, debug: true });
+    const seekTo = Math.max(0, pos.durationMs - 20_000);
+    console.log(`[DebugSkip] Seeking to ${Math.round(seekTo / 1000)}s / ${Math.round(pos.durationMs / 1000)}s`);
+    addDjActivityEntry({ type: "system", text: `⏩ Debug skip: jumping to ${Math.round(seekTo / 1000)}s`, debug: true });
     await this.services.spotifyPlayer.seek(seekTo);
     this.banterEvaluatedForTrackId = null;
     this.pendingTransition = null;
@@ -1036,7 +1036,7 @@ export class StationControls {
   _getStationHeaderTitle() {
     const selection = this.musicPicker.getSelection();
     if (!selection) {
-      return "Station";
+      return "HangTheDJ";
     }
 
     switch (selection.type) {

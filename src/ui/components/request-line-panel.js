@@ -21,7 +21,7 @@ export class RequestLinePanel {
     const savedName = localStorage.getItem(CALLER_NAME_KEY) ?? "";
 
     this.element.innerHTML = `
-      <h3>📞 Call In</h3>
+      <h2>📞 Call In</h2>
       <p class="muted" style="font-size:0.85rem;margin-bottom:1rem">
         Request an artist, track, or mood for the DJ.
       </p>

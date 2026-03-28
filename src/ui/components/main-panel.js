@@ -19,17 +19,6 @@ export class MainPanel {
   }
 
   _render() {
-    // Header
-    const header = document.createElement("header");
-    header.className = "app-header";
-    header.innerHTML = `
-      <div class="header-left">
-      <span class="app-icon">🎧</span>
-      <span class="app-name">HangTheDJ</span>
-      </div>
-    `;
-    this.element.appendChild(header);
-
     // Main content area
     const content = document.createElement("main");
     content.className = "main-content";
