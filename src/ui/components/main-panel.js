@@ -4,6 +4,7 @@
 
 import { StationControls } from "./station-controls.js";
 import { RequestLinePanel } from "./request-line-panel.js";
+import { PersonaPanel } from "./persona-panel.js";
 import { SettingsPanel } from "./settings-panel.js";
 import { DjActivityLog } from "./dj-activity-log.js";
 import { appStore } from "../../stores/app-store.js";
@@ -48,6 +49,9 @@ export class MainPanel {
 
     const rightCol = document.createElement("div");
     rightCol.className = "col-side";
+    const personaPanel = new PersonaPanel(this.services);
+    rightCol.appendChild(personaPanel.element);
+
     const requestLine = new RequestLinePanel(this.services);
     rightCol.appendChild(requestLine.element);
 

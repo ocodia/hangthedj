@@ -396,6 +396,12 @@
   margin-bottom: 0.5rem;
 }
 
+.persona-panel h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
 .request-feedback {
   padding: 0.5rem;
   border-radius: var(--radius);
@@ -737,13 +743,6 @@
 
 .persona-editor {
   margin-top: 0.75rem;
-}
-
-.persona-editor-form {
-  background: var(--color-bg-surface);
-  border: 1px solid #333;
-  border-radius: var(--radius);
-  padding: 1rem;
 }
 
 .persona-editor-form h3 {

@@ -11,13 +11,11 @@ import {
   updateSessionState,
   updateAiState,
   updatePlaybackState,
-  updatePersonaState,
   addDjActivityEntry,
   clearDjActivity,
 } from "../../stores/app-store.js";
-import { saveSettings, loadSettings, saveSession } from "../../features/storage/storage-service.js";
+import { saveSession } from "../../features/storage/storage-service.js";
 import { generateUUID } from "../../utils.js";
-import { PersonaEditor } from "./persona-editor.js";
 import { StationMusicPicker } from "./station-music-picker.js";
 import { NowPlayingBar } from "./now-playing-bar.js";
 
@@ -45,14 +43,6 @@ export class StationControls {
     this.pendingCallIns = [];
     this.isProcessingCallIn = false;
     this.processedCallInSummaries = [];
-
-    this.personaEditor = new PersonaEditor(services, {
-      onClose: () => {
-        this.personaEditor.close();
-        this._render();
-      },
-      getElevenLabsKey: () => this.services.callbacks?.getElevenLabsKey?.() ?? null,
-    });
 
     this.musicPicker = new StationMusicPicker(services.spotifyPlayer);
     this.musicPicker.onSelectionChange(() => this._render());
@@ -92,19 +82,8 @@ export class StationControls {
 
   _render() {
     const session = appStore.get("session");
-    const ai = appStore.get("ai");
     const spotify = appStore.get("spotify");
     const stationTitle = this._getStationHeaderTitle();
-
-    const persona = appStore.get("persona");
-    const personaOptions = persona.personas
-      .map(
-        (p) =>
-          `<option value="${p.id}" ${p.id === persona.activePersona?.id ? "selected" : ""}>
-            ${escapeHtml(p.name)}${p.isPreset ? " ★" : ""}
-          </option>`,
-      )
-      .join("");
 
     this.element.innerHTML = `
       <div class="station-header">
@@ -133,16 +112,6 @@ export class StationControls {
             : ""
         }
       </div>
-      <div class="field">
-        <label for="persona-select">DJ Persona</label>
-        <div style="display:flex;gap:0.5rem;align-items:center">
-          <select id="persona-select" style="flex:1">${personaOptions}</select>
-          <button class="secondary" id="btn-edit-persona">Edit</button>
-          <button class="secondary" id="btn-add-persona">+ New</button>
-        </div>
-      </div>
-      <div id="persona-editor-mount"></div>
-      ${!ai.hasOpenAiKey ? `<p class="muted" style="font-size:0.8rem">Set your OpenAI key in Settings to enable DJ banter.</p>` : ""}
       <div class="station-actions">
         ${
           this.isStopping
@@ -197,26 +166,6 @@ export class StationControls {
       }
     }
 
-    this.element.querySelector("#btn-edit-persona")?.addEventListener("click", () => {
-      const active = appStore.get("persona").activePersona;
-      if (active) {
-        this.personaEditor.open(active);
-        const mount = this.element.querySelector("#persona-editor-mount");
-        if (mount) {
-          mount.innerHTML = "";
-          mount.appendChild(this.personaEditor.element);
-        }
-      }
-    });
-    this.element.querySelector("#btn-add-persona")?.addEventListener("click", () => {
-      this.personaEditor.open(null);
-      const mount = this.element.querySelector("#persona-editor-mount");
-      if (mount) {
-        mount.innerHTML = "";
-        mount.appendChild(this.personaEditor.element);
-      }
-    });
-
     const musicSlider = this.element.querySelector("#vol-music");
     const djSlider = this.element.querySelector("#vol-dj");
     const musicValue = this.element.querySelector("#vol-music-value");
@@ -254,15 +203,6 @@ export class StationControls {
       this.services.djPlayer.setVolume(val / 100);
     });
 
-    this.element.querySelector("#persona-select")?.addEventListener("change", async (e) => {
-      const id = e.target.value;
-      const p = await this.services.personaService.getById(id);
-      if (p) {
-        updatePersonaState({ activePersona: p });
-        const current = loadSettings();
-        saveSettings({ ...current, activePersonaId: id });
-      }
-    });
   }
 
   // ── Session lifecycle ───────────────────────────────────────────────────────
